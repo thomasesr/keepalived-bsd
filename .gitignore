@@ -43,3 +43,4 @@ core.*
 # Local config overrides (keep .conf.example, ignore live conf)
 *.conf
 !*.conf.example
+!opnsense/service/conf/actions.d/actions_keepalived.conf
