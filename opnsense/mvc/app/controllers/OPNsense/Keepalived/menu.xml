@@ -1,9 +1,10 @@
+<?xml version="1.0"?>
 <menu>
-    <Services order="1" description="Services" cssclass="fa fa-cog">
-        <Keepalived>
+    <Services>
+        <Keepalived order="20">
             <url>/ui/keepalived</url>
             <visiblename>Keepalived HA</visiblename>
-            <cssclass>fa fa-exchange</cssclass>
+            <cssclass>fa fa-exchange-alt</cssclass>
         </Keepalived>
     </Services>
 </menu>
