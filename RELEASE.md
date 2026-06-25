@@ -30,7 +30,9 @@ Or clone and use `make install-all` to deploy everything in one step.
 
 ## Changes
 
-<!-- fill in before tagging -->
+- `267a5ec` feat: initial scaffold — C daemon (FSM, UDP heartbeat, VIP ioctls, DHCP control), OPNsense MVC plugin, Makefile, rc.d script, conf.example
+- `1c53cde` refactor: per-interface DHCP config toggle — modifies backend config + graceful reload instead of killing daemon; ISC/Kea via config.xml PHP helper, dnsmasq via no-dhcp-interface drop-in + SIGHUP
+- `38fbde1` docs: RELEASE.md template with placeholder substitution (`{{RELEASE_TAG}}`, `{{FREEBSD_VER}}`, `{{CHECKSUMS}}`) filled by Dockerfile at release time
 
 ## Checksums
 

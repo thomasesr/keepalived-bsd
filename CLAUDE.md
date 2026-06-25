@@ -81,3 +81,24 @@ BACKUP is default initial state. Transitions:
 - Model XML lives at `//OPNsense/keepalived` in `config.xml`.
 - rc.d script uses underscores (`keepalived_bsd`), binary uses hyphens (`keepalived-bsd`).
 - After `install-opnsense`, restart configd: `service configd restart`.
+
+## RELEASE.md maintenance
+
+**After every `git push`, update `RELEASE.md`** — append a one-line summary of each new commit to the `## Changes` section. Format:
+
+```
+- `<short-sha>` <conventional-type>: <what changed and why, one sentence>
+```
+
+Example:
+```
+- `1c53cde` refactor: per-interface DHCP config toggle — avoids killing daemon on failover
+- `38fbde1` docs: add RELEASE.md template with placeholder substitution for Dockerfile release flow
+```
+
+Rules:
+- One line per commit. No commit that is already listed should be re-added.
+- Use the actual short SHA from `git log --oneline`.
+- Keep wording tight — focus on the user-visible effect, not the implementation detail.
+- Do not remove or reformat the placeholder lines (`{{RELEASE_TAG}}` etc.) — they are filled at release time by the Dockerfile.
+- If a push contains only doc/meta changes with no functional impact, group them as a single line.
