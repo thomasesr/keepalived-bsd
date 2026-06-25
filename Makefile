@@ -2,11 +2,12 @@ CC      = cc
 CFLAGS  = -std=c99 -Wall -Wextra -pedantic -D_BSD_SOURCE
 LDFLAGS =
 
-PREFIX   = /usr/local
-SBINDIR  = $(PREFIX)/sbin
-RCDIR    = $(PREFIX)/etc/rc.d
-CONFDIR  = $(PREFIX)/etc
-OPNSBASE = $(PREFIX)/opnsense
+PREFIX     = /usr/local
+SBINDIR    = $(PREFIX)/sbin
+RCDIR      = $(PREFIX)/etc/rc.d
+CONFDIR    = $(PREFIX)/etc
+OPNSBASE   = $(PREFIX)/opnsense
+LIBEXECDIR = $(PREFIX)/libexec/keepalived-bsd
 
 TARGET  = keepalived-bsd
 
@@ -79,6 +80,17 @@ install-opnsense:
 	install -m 0644 opnsense/mvc/app/views/OPNsense/Keepalived/index.volt \
 	    $(OPNS_MVC)/views/OPNsense/Keepalived/index.volt
 
+	# dhcp helper scripts
+	install -d $(DESTDIR)$(LIBEXECDIR)
+	install -m 0755 scripts/dhcp-isc.sh \
+	    $(DESTDIR)$(LIBEXECDIR)/dhcp-isc.sh
+	install -m 0755 scripts/dhcp-kea.sh \
+	    $(DESTDIR)$(LIBEXECDIR)/dhcp-kea.sh
+	install -m 0755 scripts/dhcp-dnsmasq.sh \
+	    $(DESTDIR)$(LIBEXECDIR)/dhcp-dnsmasq.sh
+	install -m 0755 scripts/dhcp-opnsense-toggle.php \
+	    $(DESTDIR)$(LIBEXECDIR)/dhcp-opnsense-toggle.php
+
 	@echo "OPNsense plugin files installed. Register plugin via +PLUGIN.php if not using ports."
 
 # ── convenience ───────────────────────────────────────────────────────────────
@@ -96,3 +108,4 @@ uninstall-opnsense:
 	rm -rf $(OPNS_MVC)/controllers/OPNsense/Keepalived
 	rm -rf $(OPNS_MVC)/views/OPNsense/Keepalived
 	rm -f  $(OPNS_SVC)/actions_keepalived.conf
+	rm -rf $(DESTDIR)$(LIBEXECDIR)

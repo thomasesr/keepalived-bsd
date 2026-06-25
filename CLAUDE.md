@@ -48,7 +48,7 @@ config.c     → INI parser: [global] + [iface <name>] sections
 heartbeat.c  → UDP socket open/send/recv, hb_packet_t wire format
 state.c      → MASTER/BACKUP FSM, 100 ms poll loop, transition side-effects
 iface.c      → SIOCAIFADDR / SIOCDIFADDR ioctls (FreeBSD in_aliasreq)
-dhcp.c       → dispatch table: configctl start/stop per backend (ISC/Kea/dnsmasq/none)
+dhcp.c       → per-iface enable/disable via execv to backend helper scripts (no shell injection)
 logger.c     → openlog / vsyslog, mirrors to stderr in foreground mode
 ```
 
@@ -59,7 +59,7 @@ logger.c     → openlog / vsyslog, mirrors to stderr in foreground mode
 - **Root required**: UDP bind + ioctl on interfaces.
 - **Config file**: `/usr/local/etc/keepalived-bsd.conf` — INI, `[global]` + one `[iface X]` block per managed interface.
 - **Wire protocol**: custom UDP (`HB_MAGIC = "KALV"`, versioned). Keep `hb_packet_t` backwards-compatible when adding fields; bump `HB_VERSION` on breaking changes.
-- **DHCP backends are global daemons**: ISC/Kea/dnsmasq each serve all interfaces from one process. `dhcp_enable/disable` is called once per state transition (not per interface). Backend is selected via `dhcp_backend_t` in `config_t`; defaults to `DHCP_BACKEND_ISC`.
+- **DHCP is per-interface**: `dhcp_enable_iface`/`dhcp_disable_iface` called for each interface in the FSM transition loop. Each backend modifies its own config and does a graceful reload — never a full kill. ISC + Kea: PHP script toggles `<enable>` flag in `config.xml` then calls `configctl <backend> restart`. dnsmasq: writes/removes `no-dhcp-interface=<iface>` drop-in to `/var/etc/dnsmasq.d/` then sends SIGHUP (hot reload, no restart, leases preserved).
 
 ## State machine
 
@@ -74,6 +74,7 @@ BACKUP is default initial state. Transitions:
 ## OPNSense plugin wiring
 
 - `dhcp_backend` config key maps to `dhcp_backend_t` enum; `dhcp_backend_parse()` in `dhcp.c` converts strings at load time.
+- DHCP helper scripts live in `/usr/local/libexec/keepalived-bsd/`. Called via `execv` (not `system`) to prevent shell injection. Iface names validated as alphanumeric-only before exec.
 - configd actions (`actions_keepalived.conf`) bridge PHP → rc.d script.
 - `ServiceController` calls `configdRun('keepalived <action>')`.
 - `SettingsController` extends `ApiMutableModelControllerBase` — `get`/`set`/`addInterface`/`delInterface` are the only endpoints needed.

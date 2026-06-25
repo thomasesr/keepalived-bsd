@@ -1,20 +1,19 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <ctype.h>
+#include <errno.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include "dhcp.h"
 #include "logger.h"
 
-typedef struct {
-    const char *start;
-    const char *stop;
-} backend_cmds_t;
+#define SCRIPTS_DIR "/usr/local/libexec/keepalived-bsd"
 
-/* configctl action strings per backend */
-static const backend_cmds_t BACKENDS[] = {
-    /* DHCP_BACKEND_ISC     */ { "dhcpd restart", "dhcpd stop"    },
-    /* DHCP_BACKEND_KEA     */ { "kea restart",   "kea stop"      },
-    /* DHCP_BACKEND_DNSMASQ */ { "dnsmasq restart","dnsmasq stop" },
-    /* DHCP_BACKEND_NONE    */ { NULL,             NULL            },
+/* One helper script per backend — each handles config toggle + daemon reload */
+static const char *SCRIPT[] = {
+    /* DHCP_BACKEND_ISC     */ SCRIPTS_DIR "/dhcp-isc.sh",
+    /* DHCP_BACKEND_KEA     */ SCRIPTS_DIR "/dhcp-kea.sh",
+    /* DHCP_BACKEND_DNSMASQ */ SCRIPTS_DIR "/dhcp-dnsmasq.sh",
+    /* DHCP_BACKEND_NONE    */ NULL,
 };
 
 dhcp_backend_t dhcp_backend_parse(const char *str)
@@ -22,7 +21,7 @@ dhcp_backend_t dhcp_backend_parse(const char *str)
     if (strcmp(str, "kea")     == 0) return DHCP_BACKEND_KEA;
     if (strcmp(str, "dnsmasq") == 0) return DHCP_BACKEND_DNSMASQ;
     if (strcmp(str, "none")    == 0) return DHCP_BACKEND_NONE;
-    return DHCP_BACKEND_ISC; /* default */
+    return DHCP_BACKEND_ISC;
 }
 
 const char *dhcp_backend_name(dhcp_backend_t b)
@@ -36,37 +35,74 @@ const char *dhcp_backend_name(dhcp_backend_t b)
     return "unknown";
 }
 
-static int run_configctl(const char *action)
+/* FreeBSD iface names are alphanumeric only (em0, igb1, vtnet0 ...) */
+static int iface_safe(const char *iface)
 {
-    char cmd[128];
-    int  ret;
-
-    snprintf(cmd, sizeof(cmd),
-             "/usr/local/sbin/configctl %s", action);
-    ret = system(cmd);
-    if (ret != 0)
-        log_warn("dhcp: configctl %s failed (exit %d)", action, ret);
-    return ret == 0 ? 0 : -1;
+    const char *p = iface;
+    if (!*p || strlen(p) >= IFNAMSIZ) return 0;
+    for (; *p; p++)
+        if (!isalnum((unsigned char)*p))
+            return 0;
+    return 1;
 }
 
-int dhcp_enable(const config_t *cfg)
+static int run_script(const char *script, const char *action, const char *iface)
 {
-    const char *action = BACKENDS[cfg->dhcp_backend].start;
-    if (!action) {
-        log_info("dhcp: backend=none, skipping enable");
-        return 0;
+    pid_t  pid;
+    int    status;
+    char  *argv[4];
+
+    argv[0] = (char *)script;
+    argv[1] = (char *)action;
+    argv[2] = (char *)iface;
+    argv[3] = NULL;
+
+    pid = fork();
+    if (pid < 0) {
+        log_err("dhcp: fork: %s", strerror(errno));
+        return -1;
     }
-    log_info("dhcp: enabling backend '%s'", dhcp_backend_name(cfg->dhcp_backend));
-    return run_configctl(action);
+    if (pid == 0) {
+        execv(script, argv);
+        _exit(127);
+    }
+    if (waitpid(pid, &status, 0) < 0) {
+        log_err("dhcp: waitpid: %s", strerror(errno));
+        return -1;
+    }
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+        log_warn("dhcp: %s %s %s failed (exit %d)",
+                 script, action, iface,
+                 WIFEXITED(status) ? WEXITSTATUS(status) : -1);
+        return -1;
+    }
+    return 0;
 }
 
-int dhcp_disable(const config_t *cfg)
+int dhcp_enable_iface(const iface_cfg_t *iface, dhcp_backend_t backend)
 {
-    const char *action = BACKENDS[cfg->dhcp_backend].stop;
-    if (!action) {
-        log_info("dhcp: backend=none, skipping disable");
+    if (backend == DHCP_BACKEND_NONE) {
+        log_info("dhcp: backend=none, skip enable on %s", iface->iface);
         return 0;
     }
-    log_info("dhcp: disabling backend '%s'", dhcp_backend_name(cfg->dhcp_backend));
-    return run_configctl(action);
+    if (!iface_safe(iface->iface)) {
+        log_err("dhcp: unsafe iface name '%s'", iface->iface);
+        return -1;
+    }
+    log_info("dhcp: enable %s on %s", dhcp_backend_name(backend), iface->iface);
+    return run_script(SCRIPT[backend], "enable", iface->iface);
+}
+
+int dhcp_disable_iface(const iface_cfg_t *iface, dhcp_backend_t backend)
+{
+    if (backend == DHCP_BACKEND_NONE) {
+        log_info("dhcp: backend=none, skip disable on %s", iface->iface);
+        return 0;
+    }
+    if (!iface_safe(iface->iface)) {
+        log_err("dhcp: unsafe iface name '%s'", iface->iface);
+        return -1;
+    }
+    log_info("dhcp: disable %s on %s", dhcp_backend_name(backend), iface->iface);
+    return run_script(SCRIPT[backend], "disable", iface->iface);
 }

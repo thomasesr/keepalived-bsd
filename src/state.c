@@ -41,9 +41,10 @@ void state_enter_master(state_ctx_t *ctx)
     int i;
     log_info("state: transitioning to MASTER");
     ctx->current = STATE_MASTER;
-    for (i = 0; i < ctx->cfg->iface_count; i++)
+    for (i = 0; i < ctx->cfg->iface_count; i++) {
         iface_vip_add(&ctx->cfg->ifaces[i]);
-    dhcp_enable(ctx->cfg);  /* backend is global — start once */
+        dhcp_enable_iface(&ctx->cfg->ifaces[i], ctx->cfg->dhcp_backend);
+    }
 }
 
 void state_enter_backup(state_ctx_t *ctx)
@@ -51,9 +52,10 @@ void state_enter_backup(state_ctx_t *ctx)
     int i;
     log_info("state: transitioning to BACKUP");
     ctx->current = STATE_BACKUP;
-    dhcp_disable(ctx->cfg); /* stop before removing VIPs */
-    for (i = 0; i < ctx->cfg->iface_count; i++)
+    for (i = 0; i < ctx->cfg->iface_count; i++) {
+        dhcp_disable_iface(&ctx->cfg->ifaces[i], ctx->cfg->dhcp_backend);
         iface_vip_del(&ctx->cfg->ifaces[i]);
+    }
 }
 
 void state_run(state_ctx_t *ctx)
