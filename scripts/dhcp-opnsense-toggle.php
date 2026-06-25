@@ -4,8 +4,8 @@
  * Toggle the per-interface DHCP enable flag in OPNsense config.xml.
  * Usage: dhcp-opnsense-toggle.php <enable|disable> <dhcpd|kea> <iface>
  *
- * Shared by dhcp-isc.sh and dhcp-kea.sh. Each backend stores its
- * per-interface enable flag at config.xml://<backend>/<iface>/enable.
+ * Uses the OPNsense global $config array (config.inc) — not pfSense-only
+ * functions like config_set_path() which do not exist in OPNsense.
  */
 
 if ($argc !== 4) {
@@ -21,12 +21,17 @@ if (!preg_match('/^[a-z][a-z0-9]{1,14}$/', $iface))  { fwrite(STDERR, "bad iface
 
 require_once('config.inc');
 
-$path = "$backend/$iface/enable";
+global $config;
 
 if ($action === 'enable') {
-    config_set_path($path, true);
+    if (!isset($config[$backend][$iface])) {
+        $config[$backend][$iface] = [];
+    }
+    $config[$backend][$iface]['enable'] = 1;
 } else {
-    config_del_path($path);
+    if (isset($config[$backend][$iface]['enable'])) {
+        unset($config[$backend][$iface]['enable']);
+    }
 }
 
 write_config("keepalived-bsd: $action DHCP ($backend) on $iface");
