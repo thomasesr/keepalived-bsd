@@ -19,6 +19,40 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+# ── config migration ──────────────────────────────────────────────────────────
+# Called after the active .conf is confirmed to exist.
+# Adds missing keys with safe defaults. Never removes or overwrites existing values.
+config_upgrade() {
+    local conf="$1"
+    local changed=0
+
+    # Helper: append a key=value line under [global] if key is absent
+    add_global_key() {
+        local key="$1" val="$2" comment="$3"
+        if ! grep -qE "^[[:space:]]*${key}[[:space:]]*=" "${conf}"; then
+            printf '\n# Added by install.sh upgrade\n# %s\n%s = %s\n' \
+                "${comment}" "${key}" "${val}" >> "${conf}"
+            echo "    + added: ${key} = ${val}"
+            changed=1
+        fi
+    }
+
+    # v0.1.0+: required global keys
+    add_global_key dhcp_backend isc  "DHCP backend: isc | kea | dnsmasq | none"
+    add_global_key heartbeat    1    "Seconds between heartbeat sends"
+    add_global_key timeout      3    "Seconds of peer silence before MASTER promotion"
+    add_global_key preempt      yes  "Yield MASTER to higher-priority peer: yes | no"
+
+    # per-iface dhcp_backend (v0.1.7+) is optional — daemon inherits global if absent
+    # No migration needed; omitting it is valid.
+
+    if [ "${changed}" -eq 1 ]; then
+        echo "    Config updated — review ${conf} before restarting."
+    else
+        echo "    Config is current — no migration needed."
+    fi
+}
+
 echo "==> keepalived-bsd ${RELEASE_TAG}"
 
 # ── daemon binary ─────────────────────────────────────────────────────────────
@@ -41,6 +75,8 @@ if [ ! -f "${CONF}/keepalived-bsd.conf" ]; then
     echo "    installed default config — edit before starting"
 else
     echo "    existing config preserved: ${CONF}/keepalived-bsd.conf"
+    echo "--- config migration"
+    config_upgrade "${CONF}/keepalived-bsd.conf"
 fi
 
 # ── DHCP helper scripts ───────────────────────────────────────────────────────
