@@ -40,7 +40,7 @@ Or download the full release and use `make install-all` to deploy everything in 
 - `267a5ec` feat: initial scaffold — C daemon (FSM, UDP heartbeat, VIP ioctls, DHCP control), OPNsense MVC plugin, Makefile, rc.d script, conf.example
 - `1c53cde` refactor: per-interface DHCP config toggle — modifies backend config + graceful reload instead of killing daemon; ISC/Kea via config.xml PHP helper, dnsmasq via no-dhcp-interface drop-in + SIGHUP
 - `38fbde1` docs: RELEASE.md template with placeholder substitution for tag, FreeBSD version, and checksums — filled by Dockerfile at release time
-- `TBD` fix: include opnsense/ plugin files in release as opnsense-plugin.tar.gz so make install-opnsense works without cloning the repo
+- `32b166e` fix: include opnsense/ plugin files in release as opnsense-plugin.tar.gz so make install-opnsense works without cloning the repo
 
 ## Checksums
 
