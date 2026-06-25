@@ -46,7 +46,7 @@ service keepalived_bsd start
 - `38fbde1` docs: RELEASE.md template with placeholder substitution for tag, FreeBSD version, and checksums — filled by Dockerfile at release time
 - `32b166e` fix: include opnsense/ plugin files in release as opnsense-plugin.tar.gz so make install-opnsense works without cloning the repo
 - `abe0346` fix: commit actions_keepalived.conf — was excluded by *.conf gitignore, causing configctl keepalived.status to return "not found"
-- `TBD` feat: install.sh one-shot installer — fetches binary, rc.d, DHCP scripts, and OPNsense plugin from release; also add scripts.tar.gz asset
+- `d9ff433` feat: install.sh one-shot installer — fetches binary, rc.d, DHCP scripts, and OPNsense plugin from release; also add scripts.tar.gz asset
 
 ## Checksums
 
