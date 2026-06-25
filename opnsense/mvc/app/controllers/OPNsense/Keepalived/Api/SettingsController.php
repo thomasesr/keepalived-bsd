@@ -13,24 +13,48 @@ class SettingsController extends ApiMutableModelControllerBase
     /* GET /api/keepalived/settings/get */
     public function getAction()
     {
-        return $this->getBase('keepalived');
+        return ['keepalived' => $this->getModel()->getNodes()];
     }
 
     /* POST /api/keepalived/settings/set */
     public function setAction()
     {
-        return $this->setBase('keepalived');
+        $result = ['result' => 'failed'];
+        if ($this->request->isPost()) {
+            $mdl  = $this->getModel();
+            $post = $this->request->getPost('keepalived');
+            if (!empty($post['general'])) {
+                $mdl->general->setNodes($post['general']);
+            }
+            $valMsgs = $mdl->performValidation();
+            $valErrs = [];
+            foreach ($valMsgs as $msg) {
+                if (!$msg->isValid()) {
+                    foreach ($msg->getMessages() as $m) {
+                        $valErrs[$msg->getField()] = $m->getMessage();
+                    }
+                }
+            }
+            if (empty($valErrs)) {
+                $mdl->serializeToConfig();
+                Config::getInstance()->save();
+                $result = ['result' => 'saved'];
+            } else {
+                $result = ['result' => 'failed', 'validations' => $valErrs];
+            }
+        }
+        return $result;
     }
 
     /* POST /api/keepalived/settings/addInterface */
     public function addInterfaceAction()
     {
-        return $this->addBase('interface', $this->getModel()->interfaces->interface);
+        return $this->addBase('interface', 'interfaces.interface');
     }
 
     /* POST /api/keepalived/settings/delInterface/<uuid> */
     public function delInterfaceAction($uuid)
     {
-        return $this->delBase('interfaces', $this->getModel()->interfaces->interface, $uuid);
+        return $this->delBase('interface', 'interfaces.interface', $uuid);
     }
 }
