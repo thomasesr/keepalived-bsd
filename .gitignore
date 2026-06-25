@@ -1,3 +1,8 @@
+# Local dev tooling (not for repo)
+Dockerfile
+.gh-token
+.ssh-key
+
 # Build artifacts
 *.o
 *.a
