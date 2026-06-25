@@ -13,13 +13,13 @@ class SettingsController extends ApiMutableModelControllerBase
     /* GET /api/keepalived/settings/get */
     public function getAction()
     {
-        return $this->getBase('keepalived', $this->getModel());
+        return $this->getBase('keepalived');
     }
 
     /* POST /api/keepalived/settings/set */
     public function setAction()
     {
-        return $this->setBase('keepalived', $this->getModel());
+        return $this->setBase('keepalived');
     }
 
     /* POST /api/keepalived/settings/addInterface */
@@ -31,6 +31,6 @@ class SettingsController extends ApiMutableModelControllerBase
     /* POST /api/keepalived/settings/delInterface/<uuid> */
     public function delInterfaceAction($uuid)
     {
-        return $this->delBase('interface', $this->getModel()->interfaces->interface, $uuid);
+        return $this->delBase('interfaces', $this->getModel()->interfaces->interface, $uuid);
     }
 }

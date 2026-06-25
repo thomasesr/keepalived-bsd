@@ -10,7 +10,6 @@ class ServiceController extends ApiControllerBase
     /* POST /api/keepalived/service/start */
     public function startAction()
     {
-        $this->sessionClose();
         $backend = new Backend();
         $response = $backend->configdRun('keepalived start');
         return ['response' => trim($response)];
@@ -19,7 +18,6 @@ class ServiceController extends ApiControllerBase
     /* POST /api/keepalived/service/stop */
     public function stopAction()
     {
-        $this->sessionClose();
         $backend = new Backend();
         $response = $backend->configdRun('keepalived stop');
         return ['response' => trim($response)];
@@ -28,7 +26,6 @@ class ServiceController extends ApiControllerBase
     /* POST /api/keepalived/service/restart */
     public function restartAction()
     {
-        $this->sessionClose();
         $backend = new Backend();
         $response = $backend->configdRun('keepalived restart');
         return ['response' => trim($response)];
