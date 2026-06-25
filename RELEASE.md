@@ -41,7 +41,8 @@ service keepalived_bsd start
 
 ## Changes
 
-- `10450e9` fix: rewrite SettingsController for OPNsense 26.x — getBase requires string dot-path, bypass with getModel()->getNodes() for root; setBase implemented manually; addBase/delBase use 'interfaces.interface' path
+- `e832568` fix: correct menu.xml format — Services node must have no attributes to merge into existing OPNsense menu; fix icon to fa-exchange-alt (FA5)
+- `098adaa` feat: interface dropdown for VIP add — getInterfacesAction reads config.xml; select populated on page load showing description + key
 
 ## Checksums
 
