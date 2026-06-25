@@ -41,8 +41,11 @@ service keepalived_bsd start
 
 ## Changes
 
-- `e832568` fix: correct menu.xml format — Services node must have no attributes to merge into existing OPNsense menu; fix icon to fa-exchange-alt (FA5)
-- `098adaa` feat: interface dropdown for VIP add — getInterfacesAction reads config.xml; select populated on page load showing description + key
+- `0147da7` fix: install.sh always reinstalls all files on every run — no skips except active .conf
+- `16163d9` fix: dhcp-opnsense-toggle.php — replace pfSense-only config_set_path/del_path with global $config array
+- `4a12b17` feat: per-interface DHCP backend override — set dhcp_backend per [iface] section; omit or 'global' inherits from [global]
+- `b9290f4` feat: install.sh config migration — adds missing required keys with defaults on upgrade; non-destructive
+- `4b93dec` feat: firewall alias update on VIP state change — add/remove VIP from named OPNsense alias + filter reload on MASTER/BACKUP
 
 ## Checksums
 
