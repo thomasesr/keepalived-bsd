@@ -21,6 +21,17 @@ $(function () {
     $('#btn-stop').click(function ()    { svcAction('stop');    });
     $('#btn-restart').click(function () { svcAction('restart'); });
 
+    /*-- interface dropdown --*/
+    function loadInterfaceOptions() {
+        $.get('/api/keepalived/settings/getInterfaces', function (data) {
+            var sel = $('#new-iface').empty();
+            sel.append($('<option>').val('').text('— select interface —'));
+            $.each(data.interfaces || {}, function (key, descr) {
+                sel.append($('<option>').val(key).text(descr + ' (' + key + ')'));
+            });
+        });
+    }
+
     /*-- settings load/save --*/
     function loadSettings() {
         $.get('/api/keepalived/settings/get', function (data) {
@@ -99,6 +110,7 @@ $(function () {
 
     updateStatus();
     loadSettings();
+    loadInterfaceOptions();
 });
 </script>
 
@@ -182,7 +194,7 @@ $(function () {
     </table>
     <div class="row" style="margin-top:8px">
         <div class="col-sm-3">
-            <input type="text" id="new-iface" class="form-control" placeholder="em0">
+            <select id="new-iface" class="form-control"></select>
         </div>
         <div class="col-sm-4">
             <input type="text" id="new-vip" class="form-control" placeholder="10.0.0.1/24">

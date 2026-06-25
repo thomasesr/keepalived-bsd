@@ -46,6 +46,20 @@ class SettingsController extends ApiMutableModelControllerBase
         return $result;
     }
 
+    /* GET /api/keepalived/settings/getInterfaces */
+    public function getInterfacesAction()
+    {
+        $config = Config::getInstance()->object();
+        $ifaces = [];
+        if (isset($config->interfaces)) {
+            foreach ($config->interfaces->children() as $ifname => $ifcfg) {
+                $descr = !empty($ifcfg->descr) ? (string)$ifcfg->descr : strtoupper((string)$ifname);
+                $ifaces[(string)$ifname] = $descr;
+            }
+        }
+        return ['interfaces' => $ifaces];
+    }
+
     /* POST /api/keepalived/settings/addInterface */
     public function addInterfaceAction()
     {
