@@ -102,6 +102,8 @@ int config_load(const char *path, config_t *cfg)
                     log_warn("config: invalid vip '%s'", val);
             } else if (strcmp(key, "dhcp_backend") == 0) {
                 ic->dhcp_backend = dhcp_backend_parse(val);
+            } else if (strcmp(key, "alias") == 0) {
+                strncpy(ic->alias_name, val, sizeof(ic->alias_name) - 1);
             }
         } else {
             if      (strcmp(key, "peer")      == 0) {
@@ -149,8 +151,9 @@ void config_dump(const config_t *cfg)
              cfg->heartbeat_sec, cfg->timeout_sec, cfg->preempt,
              dhcp_backend_name(cfg->dhcp_backend));
     for (i = 0; i < cfg->iface_count; i++)
-        log_info("config: iface[%d] %s vip=%s/%u dhcp=%s",
+        log_info("config: iface[%d] %s vip=%s/%u dhcp=%s alias=%s",
                  i, cfg->ifaces[i].iface,
                  cfg->ifaces[i].vip_str, cfg->ifaces[i].prefix_len,
-                 dhcp_backend_name(cfg->ifaces[i].dhcp_backend));
+                 dhcp_backend_name(cfg->ifaces[i].dhcp_backend),
+                 cfg->ifaces[i].alias_name[0] ? cfg->ifaces[i].alias_name : "(none)");
 }

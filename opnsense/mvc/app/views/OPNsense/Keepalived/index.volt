@@ -79,6 +79,7 @@ $(function () {
                 $('<tr>').append(
                     $('<td>').text(row.iface),
                     $('<td>').text(row.vip),
+                    $('<td>').text(row.alias || '—'),
                     $('<td>').text(backend),
                     $('<td>').append(
                         $('<button class="btn btn-xs btn-danger">').text('Remove')
@@ -94,6 +95,7 @@ $(function () {
             interface: {
                 iface:        $('#new-iface').val(),
                 vip:          $('#new-vip').val(),
+                alias:        $('#new-alias').val(),
                 dhcp_backend: $('#new-dhcp-backend').val()
             }
         };
@@ -192,17 +194,21 @@ $(function () {
         <thead><tr>
             <th>{{ lang._('Interface') }}</th>
             <th>{{ lang._('Virtual IP (CIDR)') }}</th>
+            <th>{{ lang._('FW Alias') }}</th>
             <th>{{ lang._('DHCP Backend') }}</th>
             <th></th>
         </tr></thead>
         <tbody id="iface-tbody"></tbody>
     </table>
     <div class="row" style="margin-top:8px">
-        <div class="col-sm-3">
+        <div class="col-sm-2">
             <select id="new-iface" class="form-control"></select>
         </div>
-        <div class="col-sm-3">
+        <div class="col-sm-2">
             <input type="text" id="new-vip" class="form-control" placeholder="10.0.0.1/24">
+        </div>
+        <div class="col-sm-2">
+            <input type="text" id="new-alias" class="form-control" placeholder="{{ lang._('alias name (optional)') }}">
         </div>
         <div class="col-sm-3">
             <select id="new-dhcp-backend" class="form-control">

@@ -17,6 +17,7 @@ SRCS    = src/main.c \
           src/state.c \
           src/iface.c \
           src/dhcp.c \
+          src/alias.c \
           src/logger.c
 
 OBJS    = $(SRCS:.c=.o)
@@ -94,6 +95,10 @@ install-opnsense:
 	    $(DESTDIR)$(LIBEXECDIR)/dhcp-dnsmasq.sh
 	install -m 0755 scripts/dhcp-opnsense-toggle.php \
 	    $(DESTDIR)$(LIBEXECDIR)/dhcp-opnsense-toggle.php
+	install -m 0755 scripts/alias-update.sh \
+	    $(DESTDIR)$(LIBEXECDIR)/alias-update.sh
+	install -m 0755 scripts/alias-update.php \
+	    $(DESTDIR)$(LIBEXECDIR)/alias-update.php
 
 	@echo "OPNsense plugin files installed. Register plugin via +PLUGIN.php if not using ports."
 

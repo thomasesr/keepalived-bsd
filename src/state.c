@@ -8,6 +8,7 @@
 #include "heartbeat.h"
 #include "iface.h"
 #include "dhcp.h"
+#include "alias.h"
 #include "logger.h"
 
 static time_t now(void)
@@ -43,6 +44,7 @@ void state_enter_master(state_ctx_t *ctx)
     ctx->current = STATE_MASTER;
     for (i = 0; i < ctx->cfg->iface_count; i++) {
         iface_vip_add(&ctx->cfg->ifaces[i]);
+        alias_add_vip(&ctx->cfg->ifaces[i]);
         dhcp_enable_iface(&ctx->cfg->ifaces[i], ctx->cfg->ifaces[i].dhcp_backend);
     }
 }
@@ -54,6 +56,7 @@ void state_enter_backup(state_ctx_t *ctx)
     ctx->current = STATE_BACKUP;
     for (i = 0; i < ctx->cfg->iface_count; i++) {
         dhcp_disable_iface(&ctx->cfg->ifaces[i], ctx->cfg->ifaces[i].dhcp_backend);
+        alias_del_vip(&ctx->cfg->ifaces[i]);
         iface_vip_del(&ctx->cfg->ifaces[i]);
     }
 }

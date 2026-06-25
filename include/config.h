@@ -22,6 +22,7 @@ typedef struct {
     struct in_addr vip_addr;
     uint8_t        prefix_len;
     dhcp_backend_t dhcp_backend;    /* per-iface override; INHERIT = use global */
+    char           alias_name[64];  /* OPNsense firewall alias to update; empty = skip */
 } iface_cfg_t;
 
 typedef struct {

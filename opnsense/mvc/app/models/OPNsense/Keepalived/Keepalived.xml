@@ -63,6 +63,11 @@
                     <Mask>/^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/</Mask>
                     <ValidationMessage>Enter VIP as x.x.x.x/prefix</ValidationMessage>
                 </vip>
+                <alias type="TextField">
+                    <Required>N</Required>
+                    <Mask>/^[a-zA-Z0-9_]{0,64}$/</Mask>
+                    <ValidationMessage>Alias name: letters, digits, underscore only</ValidationMessage>
+                </alias>
                 <dhcp_backend type="OptionField">
                     <Required>N</Required>
                     <Default>global</Default>

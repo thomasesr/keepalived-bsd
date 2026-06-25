@@ -40,10 +40,18 @@ dhcp_backend = isc
 
 [iface em0]
 # Virtual IP to assign when MASTER, remove when BACKUP
-vip         = 10.0.0.1/24
-# dhcp_backend = global   # omit or 'global' to inherit [global] setting
-                           # override per-iface: isc | kea | dnsmasq | none
+vip          = 10.0.0.1/24
+
+# OPNsense firewall alias to update with the VIP on MASTER (optional).
+# The alias is created automatically if it does not exist.
+# Use this alias in firewall rules that should match the VIP address.
+# alias      = keepalived_vip_em0
+
+# Per-interface DHCP backend override (optional).
+# Omit or set to 'global' to inherit the [global] dhcp_backend value.
+# dhcp_backend = global   # isc | kea | dnsmasq | none | global
 
 # [iface em1]
 # vip          = 192.168.100.1/24
-# dhcp_backend = dnsmasq   # this interface uses dnsmasq, others use global
+# alias        = keepalived_vip_em1
+# dhcp_backend = dnsmasq
