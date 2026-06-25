@@ -41,6 +41,7 @@ Or download the full release and use `make install-all` to deploy everything in 
 - `1c53cde` refactor: per-interface DHCP config toggle — modifies backend config + graceful reload instead of killing daemon; ISC/Kea via config.xml PHP helper, dnsmasq via no-dhcp-interface drop-in + SIGHUP
 - `38fbde1` docs: RELEASE.md template with placeholder substitution for tag, FreeBSD version, and checksums — filled by Dockerfile at release time
 - `32b166e` fix: include opnsense/ plugin files in release as opnsense-plugin.tar.gz so make install-opnsense works without cloning the repo
+- `abe0346` fix: commit actions_keepalived.conf — was excluded by *.conf gitignore, causing configctl keepalived.status to return "not found"
 
 ## Checksums
 
