@@ -1,0 +1,9 @@
+<acl>
+    <page-services-keepalived>
+        <patterns>
+            <pattern>ui/keepalived*</pattern>
+            <pattern>api/keepalived*</pattern>
+        </patterns>
+        <description>Keepalived HA</description>
+    </page-services-keepalived>
+</acl>

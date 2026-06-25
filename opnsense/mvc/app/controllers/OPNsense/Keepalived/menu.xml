@@ -1,0 +1,9 @@
+<menu>
+    <Services order="1" description="Services" cssclass="fa fa-cog">
+        <Keepalived>
+            <url>/ui/keepalived</url>
+            <visiblename>Keepalived HA</visiblename>
+            <cssclass>fa fa-exchange</cssclass>
+        </Keepalived>
+    </Services>
+</menu>
