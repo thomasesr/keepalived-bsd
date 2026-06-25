@@ -73,10 +73,13 @@ $(function () {
     function loadInterfaces(ifaces) {
         var tbody = $('#iface-tbody').empty();
         $.each(ifaces.interface || {}, function (uuid, row) {
+            var backend = row.dhcp_backend && row.dhcp_backend !== 'global'
+                ? row.dhcp_backend : '{{ lang._('global') }}';
             tbody.append(
                 $('<tr>').append(
                     $('<td>').text(row.iface),
                     $('<td>').text(row.vip),
+                    $('<td>').text(backend),
                     $('<td>').append(
                         $('<button class="btn btn-xs btn-danger">').text('Remove')
                             .click(function () { delInterface(uuid); })
@@ -89,8 +92,9 @@ $(function () {
     function addInterface() {
         var payload = {
             interface: {
-                iface: $('#new-iface').val(),
-                vip:   $('#new-vip').val()
+                iface:        $('#new-iface').val(),
+                vip:          $('#new-vip').val(),
+                dhcp_backend: $('#new-dhcp-backend').val()
             }
         };
         $.post('/api/keepalived/settings/addInterface', payload, function () {
@@ -188,6 +192,7 @@ $(function () {
         <thead><tr>
             <th>{{ lang._('Interface') }}</th>
             <th>{{ lang._('Virtual IP (CIDR)') }}</th>
+            <th>{{ lang._('DHCP Backend') }}</th>
             <th></th>
         </tr></thead>
         <tbody id="iface-tbody"></tbody>
@@ -196,8 +201,17 @@ $(function () {
         <div class="col-sm-3">
             <select id="new-iface" class="form-control"></select>
         </div>
-        <div class="col-sm-4">
+        <div class="col-sm-3">
             <input type="text" id="new-vip" class="form-control" placeholder="10.0.0.1/24">
+        </div>
+        <div class="col-sm-3">
+            <select id="new-dhcp-backend" class="form-control">
+                <option value="global">{{ lang._('Global setting') }}</option>
+                <option value="isc">{{ lang._('ISC DHCP (dhcpd)') }}</option>
+                <option value="kea">{{ lang._('Kea DHCPv4') }}</option>
+                <option value="dnsmasq">{{ lang._('dnsmasq') }}</option>
+                <option value="none">{{ lang._('None') }}</option>
+            </select>
         </div>
         <div class="col-sm-2">
             <button id="btn-add-iface" class="btn btn-sm btn-default">{{ lang._('Add') }}</button>

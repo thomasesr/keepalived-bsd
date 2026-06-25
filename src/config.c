@@ -83,6 +83,7 @@ int config_load(const char *path, config_t *cfg)
                     iface_idx = cfg->iface_count++;
                     strncpy(cfg->ifaces[iface_idx].iface,
                             section + 6, IFNAMSIZ - 1);
+                    cfg->ifaces[iface_idx].dhcp_backend = DHCP_BACKEND_INHERIT;
                 }
             } else {
                 iface_idx = -1;
@@ -99,6 +100,8 @@ int config_load(const char *path, config_t *cfg)
                 strncpy(ic->vip_str, val, sizeof(ic->vip_str) - 1);
                 if (parse_vip(val, &ic->vip_addr, &ic->prefix_len) != 0)
                     log_warn("config: invalid vip '%s'", val);
+            } else if (strcmp(key, "dhcp_backend") == 0) {
+                ic->dhcp_backend = dhcp_backend_parse(val);
             }
         } else {
             if      (strcmp(key, "peer")      == 0) {
@@ -116,6 +119,15 @@ int config_load(const char *path, config_t *cfg)
     }
 
     fclose(f);
+
+    /* resolve per-iface INHERIT → global backend */
+    {
+        int i;
+        for (i = 0; i < cfg->iface_count; i++) {
+            if (cfg->ifaces[i].dhcp_backend == DHCP_BACKEND_INHERIT)
+                cfg->ifaces[i].dhcp_backend = cfg->dhcp_backend;
+        }
+    }
 
     if (cfg->peer_str[0] == '\0') {
         log_err("config: 'peer' is required");
@@ -137,7 +149,8 @@ void config_dump(const config_t *cfg)
              cfg->heartbeat_sec, cfg->timeout_sec, cfg->preempt,
              dhcp_backend_name(cfg->dhcp_backend));
     for (i = 0; i < cfg->iface_count; i++)
-        log_info("config: iface[%d] %s vip=%s/%u",
+        log_info("config: iface[%d] %s vip=%s/%u dhcp=%s",
                  i, cfg->ifaces[i].iface,
-                 cfg->ifaces[i].vip_str, cfg->ifaces[i].prefix_len);
+                 cfg->ifaces[i].vip_str, cfg->ifaces[i].prefix_len,
+                 dhcp_backend_name(cfg->ifaces[i].dhcp_backend));
 }

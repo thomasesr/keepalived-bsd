@@ -21,6 +21,7 @@ dhcp_backend_t dhcp_backend_parse(const char *str)
     if (strcmp(str, "kea")     == 0) return DHCP_BACKEND_KEA;
     if (strcmp(str, "dnsmasq") == 0) return DHCP_BACKEND_DNSMASQ;
     if (strcmp(str, "none")    == 0) return DHCP_BACKEND_NONE;
+    if (strcmp(str, "global")  == 0) return DHCP_BACKEND_INHERIT;
     return DHCP_BACKEND_ISC;
 }
 
@@ -31,6 +32,7 @@ const char *dhcp_backend_name(dhcp_backend_t b)
     case DHCP_BACKEND_KEA:     return "kea";
     case DHCP_BACKEND_DNSMASQ: return "dnsmasq";
     case DHCP_BACKEND_NONE:    return "none";
+    case DHCP_BACKEND_INHERIT: return "global";
     }
     return "unknown";
 }

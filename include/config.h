@@ -11,6 +11,7 @@ typedef enum {
     DHCP_BACKEND_KEA     = 1,
     DHCP_BACKEND_DNSMASQ = 2,
     DHCP_BACKEND_NONE    = 3,
+    DHCP_BACKEND_INHERIT = 255, /* iface-level: inherit global setting */
 } dhcp_backend_t;
 
 #define MAX_IFACES 8
@@ -20,6 +21,7 @@ typedef struct {
     char           vip_str[64];     /* "x.x.x.x/prefix" */
     struct in_addr vip_addr;
     uint8_t        prefix_len;
+    dhcp_backend_t dhcp_backend;    /* per-iface override; INHERIT = use global */
 } iface_cfg_t;
 
 typedef struct {
