@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# PROVIDE: keepalived_bsd
+# REQUIRE: NETWORKING
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="keepalived_bsd"
+rcvar="${name}_enable"
+desc="Keepalived-BSD HA daemon"
+
+command="/usr/local/sbin/keepalived-bsd"
+command_args="-c /usr/local/etc/keepalived-bsd.conf"
+pidfile="/var/run/${name}.pid"
+required_files="/usr/local/etc/keepalived-bsd.conf"
+
+start_precmd="${name}_prestart"
+stop_postcmd="${name}_poststop"
+
+keepalived_bsd_prestart()
+{
+    if [ ! -f "$required_files" ]; then
+        err 1 "config not found: $required_files"
+    fi
+}
+
+keepalived_bsd_poststop()
+{
+    rm -f "$pidfile"
+}
+
+load_rc_config $name
+: ${keepalived_bsd_enable:="NO"}
+run_rc_command "$1"

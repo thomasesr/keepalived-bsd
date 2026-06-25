@@ -1,0 +1,46 @@
+# keepalived-bsd.conf.example
+#
+# Copy to /usr/local/etc/keepalived-bsd.conf and edit before starting.
+
+[global]
+
+# IP address of the peer gateway
+peer        = 192.168.1.2
+
+# UDP port for heartbeat packets (must match on both sides)
+port        = 5405
+
+# Election priority — higher value wins MASTER.
+# Set PRIMARY higher than BACKUP (e.g. 110 vs 100).
+priority    = 110
+
+# Seconds between heartbeat sends (when MASTER)
+heartbeat   = 1
+
+# Seconds of silence from peer before promoting to MASTER
+timeout     = 3
+
+# If 'yes': yield MASTER to a peer with higher priority when it comes back.
+# If 'no':  hold MASTER until local process restarts.
+preempt     = yes
+
+# DHCP backend to start (MASTER) / stop (BACKUP).
+# The backend daemon is controlled as a whole — not per interface.
+#
+#   isc      ISC dhcpd (legacy OPNsense default)   configctl dhcpd restart|stop
+#   kea      Kea DHCPv4 (requires os-kea plugin)   configctl kea restart|stop
+#   dnsmasq  dnsmasq in DHCP mode                  configctl dnsmasq restart|stop
+#   none     No automatic DHCP control (manage it yourself)
+#
+dhcp_backend = isc
+
+# --- Interface sections ---
+# One [iface <name>] block per interface that needs a VIP + DHCP toggle.
+# <name> must be the exact FreeBSD interface name (em0, igb0, vtnet0, etc.)
+
+[iface em0]
+# Virtual IP to assign when MASTER, remove when BACKUP
+vip         = 10.0.0.1/24
+
+# [iface em1]
+# vip         = 192.168.100.1/24

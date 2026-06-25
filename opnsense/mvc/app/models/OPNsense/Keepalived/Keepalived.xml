@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<model>
+    <mount>//OPNsense/keepalived</mount>
+    <version>1.0.0</version>
+    <description>Keepalived-BSD HA Configuration</description>
+    <items>
+        <general>
+            <enabled type="BooleanField">
+                <Default>0</Default>
+                <Required>Y</Required>
+            </enabled>
+            <peer type="TextField">
+                <Required>Y</Required>
+                <Mask>/^(\d{1,3}\.){3}\d{1,3}$/</Mask>
+                <ValidationMessage>Enter a valid IPv4 peer address</ValidationMessage>
+            </peer>
+            <port type="IntegerField">
+                <Required>Y</Required>
+                <Default>5405</Default>
+                <MinimumValue>1</MinimumValue>
+                <MaximumValue>65535</MaximumValue>
+            </port>
+            <priority type="IntegerField">
+                <Required>Y</Required>
+                <Default>100</Default>
+                <MinimumValue>1</MinimumValue>
+                <MaximumValue>255</MaximumValue>
+            </priority>
+            <heartbeat type="IntegerField">
+                <Required>Y</Required>
+                <Default>1</Default>
+                <MinimumValue>1</MinimumValue>
+                <MaximumValue>60</MaximumValue>
+            </heartbeat>
+            <timeout type="IntegerField">
+                <Required>Y</Required>
+                <Default>3</Default>
+                <MinimumValue>1</MinimumValue>
+                <MaximumValue>60</MaximumValue>
+            </timeout>
+            <preempt type="BooleanField">
+                <Default>1</Default>
+            </preempt>
+            <dhcp_backend type="OptionField">
+                <Required>Y</Required>
+                <Default>isc</Default>
+                <OptionValues>
+                    <isc>ISC DHCP (dhcpd) — legacy default</isc>
+                    <kea>Kea DHCPv4 (os-kea plugin)</kea>
+                    <dnsmasq>dnsmasq</dnsmasq>
+                    <none>None — manual DHCP control</none>
+                </OptionValues>
+            </dhcp_backend>
+        </general>
+        <interfaces>
+            <interface type="ArrayField">
+                <iface type="InterfaceField">
+                    <Required>Y</Required>
+                    <AllowDynamic>N</AllowDynamic>
+                </iface>
+                <vip type="TextField">
+                    <Required>Y</Required>
+                    <Mask>/^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/</Mask>
+                    <ValidationMessage>Enter VIP as x.x.x.x/prefix</ValidationMessage>
+                </vip>
+            </interface>
+        </interfaces>
+    </items>
+</model>

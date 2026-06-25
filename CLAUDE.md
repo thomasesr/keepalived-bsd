@@ -1,0 +1,82 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+C daemon (`keepalived-bsd`) that runs on OPNSense (FreeBSD) and implements VRRP-like gateway failover. Coordinates MASTER/BACKUP state with a peer (OpenWRT/Linux) via UDP heartbeats, then manages virtual IPs and DHCP server state on interfaces. Ships with an OPNSense MVC plugin for web UI configuration.
+
+## Build & run
+
+```sh
+make                        # build binary: ./keepalived-bsd
+make clean
+make install                # /usr/local/sbin/keepalived-bsd + default conf
+make install-rc             # /usr/local/etc/rc.d/keepalived_bsd
+make install-opnsense       # OPNSense MVC plugin files
+make install-all            # all three above
+
+# Run (root required)
+./keepalived-bsd -c keepalived-bsd.conf -f   # foreground / stderr logging
+./keepalived-bsd -c keepalived-bsd.conf      # daemonize / syslog
+```
+
+## Repository layout
+
+```
+src/            C daemon source
+include/        C headers
+rc.d/           FreeBSD rc.d startup script
+opnsense/       OPNSense plugin (install with make install-opnsense)
+  +PLUGIN.php               plugin manifest, menu + ACL registration
+  service/conf/actions.d/   configd action definitions (start/stop/status)
+  mvc/app/
+    models/OPNsense/Keepalived/   Keepalived.xml (field defs) + Keepalived.php
+    controllers/OPNsense/Keepalived/
+      IndexController.php         serves UI page
+      Api/ServiceController.php   start/stop/restart/status API
+      Api/SettingsController.php  settings CRUD + interface add/del
+    views/OPNsense/Keepalived/
+      index.volt                  Bootstrap UI: status, settings form, iface table
+```
+
+## C daemon architecture
+
+```
+main.c       → arg parse (-c config, -f foreground), daemonize, signals
+config.c     → INI parser: [global] + [iface <name>] sections
+heartbeat.c  → UDP socket open/send/recv, hb_packet_t wire format
+state.c      → MASTER/BACKUP FSM, 100 ms poll loop, transition side-effects
+iface.c      → SIOCAIFADDR / SIOCDIFADDR ioctls (FreeBSD in_aliasreq)
+dhcp.c       → dispatch table: configctl start/stop per backend (ISC/Kea/dnsmasq/none)
+logger.c     → openlog / vsyslog, mirrors to stderr in foreground mode
+```
+
+## Key design constraints
+
+- **FreeBSD target**: VIP via `SIOCAIFADDR`/`SIOCDIFADDR` with `struct in_aliasreq` — not Linux `ifreq`. DHCP via `/usr/local/sbin/configctl`.
+- **No external deps**: pure C99, POSIX, BSD libc only.
+- **Root required**: UDP bind + ioctl on interfaces.
+- **Config file**: `/usr/local/etc/keepalived-bsd.conf` — INI, `[global]` + one `[iface X]` block per managed interface.
+- **Wire protocol**: custom UDP (`HB_MAGIC = "KALV"`, versioned). Keep `hb_packet_t` backwards-compatible when adding fields; bump `HB_VERSION` on breaking changes.
+- **DHCP backends are global daemons**: ISC/Kea/dnsmasq each serve all interfaces from one process. `dhcp_enable/disable` is called once per state transition (not per interface). Backend is selected via `dhcp_backend_t` in `config_t`; defaults to `DHCP_BACKEND_ISC`.
+
+## State machine
+
+BACKUP is default initial state. Transitions:
+
+| From | Event | To | Side-effect |
+|------|-------|----|-------------|
+| BACKUP | peer silent ≥ timeout | MASTER | add VIPs, enable DHCP |
+| MASTER | peer heartbeat with higher priority | BACKUP | remove VIPs, disable DHCP |
+| MASTER | SIGTERM / shutdown | BACKUP | remove VIPs, disable DHCP, send goodbye packet |
+
+## OPNSense plugin wiring
+
+- `dhcp_backend` config key maps to `dhcp_backend_t` enum; `dhcp_backend_parse()` in `dhcp.c` converts strings at load time.
+- configd actions (`actions_keepalived.conf`) bridge PHP → rc.d script.
+- `ServiceController` calls `configdRun('keepalived <action>')`.
+- `SettingsController` extends `ApiMutableModelControllerBase` — `get`/`set`/`addInterface`/`delInterface` are the only endpoints needed.
+- Model XML lives at `//OPNsense/keepalived` in `config.xml`.
+- rc.d script uses underscores (`keepalived_bsd`), binary uses hyphens (`keepalived-bsd`).
+- After `install-opnsense`, restart configd: `service configd restart`.

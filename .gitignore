@@ -1,0 +1,40 @@
+# Build artifacts
+*.o
+*.a
+*.so
+*.so.*
+keepalived-bsd
+
+# Build directories
+build/
+obj/
+
+# Autotools / CMake
+Makefile.in
+configure
+autom4te.cache/
+config.log
+config.status
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Tags
+tags
+TAGS
+
+# Core dumps
+core
+core.*
+
+# Local config overrides (keep .conf.example, ignore live conf)
+*.conf
+!*.conf.example
