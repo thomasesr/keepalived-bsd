@@ -84,21 +84,27 @@ BACKUP is default initial state. Transitions:
 
 ## RELEASE.md maintenance
 
-**After every `git push`, update `RELEASE.md`** — append a one-line summary of each new commit to the `## Changes` section. Format:
+**When tagging a new release, replace the `## Changes` section** with only the commits since the previous release tag. Do not carry forward commits from older releases.
 
+Get the range with:
+```sh
+git log <prev-tag>..HEAD --oneline
+```
+
+Format each commit as:
 ```
 - `<short-sha>` <conventional-type>: <what changed and why, one sentence>
 ```
 
-Example:
+Example (tagging v0.1.2 after v0.1.1):
 ```
-- `1c53cde` refactor: per-interface DHCP config toggle — avoids killing daemon on failover
-- `38fbde1` docs: add RELEASE.md template with placeholder substitution for Dockerfile release flow
+- `abe0346` fix: commit actions_keepalived.conf — excluded by *.conf gitignore
+- `984afee` docs: update RELEASE.md for v0.1.2
 ```
 
 Rules:
-- One line per commit. No commit that is already listed should be re-added.
+- Only commits since the **previous tag** — not the full history.
 - Use the actual short SHA from `git log --oneline`.
-- Keep wording tight — focus on the user-visible effect, not the implementation detail.
-- Do not remove or reformat the placeholder lines (`{{RELEASE_TAG}}` etc.) — they are filled at release time by the Dockerfile.
-- If a push contains only doc/meta changes with no functional impact, group them as a single line.
+- Keep wording tight — focus on user-visible effect, not implementation detail.
+- Do not remove or reformat the placeholder lines (`{{RELEASE_TAG}}` etc.) — filled at release time by the Dockerfile.
+- Skip pure doc/meta commits unless they affect the install or upgrade experience.

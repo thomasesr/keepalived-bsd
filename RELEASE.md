@@ -41,12 +41,7 @@ service keepalived_bsd start
 
 ## Changes
 
-- `267a5ec` feat: initial scaffold — C daemon (FSM, UDP heartbeat, VIP ioctls, DHCP control), OPNsense MVC plugin, Makefile, rc.d script, conf.example
-- `1c53cde` refactor: per-interface DHCP config toggle — modifies backend config + graceful reload instead of killing daemon; ISC/Kea via config.xml PHP helper, dnsmasq via no-dhcp-interface drop-in + SIGHUP
-- `38fbde1` docs: RELEASE.md template with placeholder substitution for tag, FreeBSD version, and checksums — filled by Dockerfile at release time
-- `32b166e` fix: include opnsense/ plugin files in release as opnsense-plugin.tar.gz so make install-opnsense works without cloning the repo
-- `abe0346` fix: commit actions_keepalived.conf — was excluded by *.conf gitignore, causing configctl keepalived.status to return "not found"
-- `d9ff433` feat: install.sh one-shot installer — fetches binary, rc.d, DHCP scripts, and OPNsense plugin from release; also add scripts.tar.gz asset
+- `4fdda70` fix: correct OPNsense 26.x API controller signatures — getBase/setBase drop object arg, remove sessionClose() unavailable in 26.x
 
 ## Checksums
 
