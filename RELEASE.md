@@ -41,7 +41,7 @@ service keepalived_bsd start
 
 ## Changes
 
-- `4fdda70` fix: correct OPNsense 26.x API controller signatures — getBase/setBase drop object arg, remove sessionClose() unavailable in 26.x
+- `10450e9` fix: rewrite SettingsController for OPNsense 26.x — getBase requires string dot-path, bypass with getModel()->getNodes() for root; setBase implemented manually; addBase/delBase use 'interfaces.interface' path
 
 ## Checksums
 
