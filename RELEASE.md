@@ -41,7 +41,7 @@ service keepalived_bsd start
 
 ## Changes
 
-- `096794f` fix(plugin): install plugins.inc.d and register privileges — fixes configd "action not found" errors and adds plugin to System > Access > Privileges
+- `fa3b0e0` fix(acl): add missing `<name>` element to ACL.xml — privilege entry now appears in System > Access > Privileges for user/group assignment
 
 ## Checksums
 
