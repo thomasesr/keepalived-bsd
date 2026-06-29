@@ -1,9 +1,10 @@
 <acl>
     <page-services-keepalived>
+        <name>WebCfg - Services: Keepalived HA</name>
+        <description>Allow access to the Keepalived HA plugin</description>
         <patterns>
-            <pattern>ui/keepalived*</pattern>
-            <pattern>api/keepalived*</pattern>
+            <pattern>ui/keepalived/*</pattern>
+            <pattern>api/keepalived/*</pattern>
         </patterns>
-        <description>Keepalived HA</description>
     </page-services-keepalived>
 </acl>
