@@ -13,6 +13,7 @@ return [
         'usr/local/opnsense/mvc/app/models/OPNsense/Keepalived',
         'usr/local/opnsense/mvc/app/views/OPNsense/Keepalived',
         'usr/local/opnsense/service/conf/actions.d/actions_keepalived.conf',
+        'usr/local/opnsense/scripts/OPNsense/Keepalived',
     ],
     'menu' => [
         'Services' => [
