@@ -53,8 +53,14 @@ install-rc:
 
 OPNS_MVC   = $(DESTDIR)$(OPNSBASE)/mvc/app
 OPNS_SVC   = $(DESTDIR)$(OPNSBASE)/service/conf/actions.d
+OPNS_INC   = $(DESTDIR)$(PREFIX)/etc/inc/plugins.inc.d
 
 install-opnsense:
+	# plugin registration hook
+	install -d $(OPNS_INC)
+	install -m 0644 opnsense/etc/inc/plugins.inc.d/keepalived.inc \
+	    $(OPNS_INC)/keepalived.inc
+
 	# configd action
 	install -d $(OPNS_SVC)
 	install -m 0644 opnsense/service/conf/actions.d/actions_keepalived.conf \
@@ -119,6 +125,7 @@ uninstall:
 	rm -f $(DESTDIR)$(RCDIR)/keepalived_bsd
 
 uninstall-opnsense:
+	rm -f  $(OPNS_INC)/keepalived.inc
 	rm -rf $(OPNS_MVC)/models/OPNsense/Keepalived
 	rm -rf $(OPNS_MVC)/controllers/OPNsense/Keepalived
 	rm -rf $(OPNS_MVC)/views/OPNsense/Keepalived

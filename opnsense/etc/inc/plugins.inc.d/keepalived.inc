@@ -16,3 +16,13 @@ function keepalived_services()
         ],
     ];
 }
+
+function keepalived_privileges()
+{
+    return [
+        'page-services-keepalived' => [
+            'descr' => gettext('Keepalived HA'),
+            'match' => ['ui/keepalived*', 'api/keepalived/*'],
+        ],
+    ];
+}
