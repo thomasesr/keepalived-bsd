@@ -104,10 +104,21 @@ fi
 rm -rf /tmp/opnsense_cache
 service configd restart
 echo "    configd restarted"
-# Restart php-fpm to clear opcache/realpath cache so new menu.xml is found
-/usr/local/etc/rc.d/php-fpm onerestart 2>/dev/null || \
-    service php-fpm onerestart 2>/dev/null || true
-echo "    php-fpm restarted"
+# Reload php-fpm workers to clear opcache/realpath cache so new menu.xml is found.
+# USR2 = graceful reload of all workers; works regardless of php version suffix in rc name.
+_fpm_reloaded=0
+for _pid in /var/run/php-fpm.pid /var/run/php*.pid; do
+    [ -f "$_pid" ] || continue
+    kill -USR2 "$(cat "$_pid")" 2>/dev/null && _fpm_reloaded=1 && break
+done
+if [ "$_fpm_reloaded" -eq 0 ]; then
+    # fallback: try versioned rc.d service names (e.g. php83_fpm, php82_fpm)
+    for _svc in $(ls /usr/local/etc/rc.d/ 2>/dev/null | grep -E '^php[0-9]*[-_]fpm$'); do
+        service "$_svc" onerestart 2>/dev/null && _fpm_reloaded=1 && break
+    done
+fi
+[ "$_fpm_reloaded" -eq 1 ] && echo "    php-fpm reloaded" || echo "    php-fpm not found — reload manually if menu does not appear"
+unset _fpm_reloaded _pid _svc
 
 # ── cleanup ───────────────────────────────────────────────────────────────────
 rm -f /tmp/keepalived-bsd \
