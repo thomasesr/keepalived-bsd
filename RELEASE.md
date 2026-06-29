@@ -41,8 +41,7 @@ service keepalived_bsd start
 
 ## Changes
 
-- `5be0762` fix(install): use kill -USR2 on php-fpm master PID to reload workers — OPNsense names the rc.d script with a version suffix so the generic service name failed
-- `5b0757c` fix(plugin): register service in plugins.inc.d and restart php-fpm so keepalived appears in OPNsense Services widget and nav menu after install
+- `b7b0c29` fix(dhcp): guard against non-array `$config[$backend]` in toggle script — OPNsense omits the dhcpd/kea section from config.xml when unconfigured, causing a fatal "Cannot access offset of type string on string"
 
 ## Checksums
 
