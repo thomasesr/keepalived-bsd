@@ -64,6 +64,17 @@ config_upgrade() {
 
 echo "==> keepalived-bsd ${RELEASE_TAG}"
 
+# ── purge old installation ────────────────────────────────────────────────────
+# Remove all managed files before reinstalling so stale files cannot linger.
+# Active keepalived-bsd.conf is intentionally excluded.
+echo "--- purge old files"
+rm -rf "${OPNSBASE}/mvc/app/models/OPNsense/Keepalived"
+rm -rf "${OPNSBASE}/mvc/app/controllers/OPNsense/Keepalived"
+rm -rf "${OPNSBASE}/mvc/app/views/OPNsense/Keepalived"
+rm -f  "${OPNSBASE}/service/conf/actions.d/actions_keepalived.conf"
+rm -f  /usr/local/etc/inc/plugins.inc.d/keepalived.inc
+rm -rf "${LIBEXEC}"
+
 # ── daemon binary ─────────────────────────────────────────────────────────────
 echo "--- daemon binary"
 fetch -q -o /tmp/keepalived-bsd "${BASE_URL}/keepalived-bsd"
