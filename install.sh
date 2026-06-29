@@ -21,7 +21,7 @@ fi
 
 # ── config migration ──────────────────────────────────────────────────────────
 # Called after the active .conf is confirmed to exist.
-# Adds missing keys with safe defaults. Never removes or overwrites existing values.
+# Adds missing keys with safe defaults; removes deprecated keys. Never overwrites existing values.
 config_upgrade() {
     local conf="$1"
     local changed=0
@@ -37,14 +37,23 @@ config_upgrade() {
         fi
     }
 
+    # Helper: remove a key=value line from config (FreeBSD sed requires -i '')
+    remove_global_key() {
+        local key="$1"
+        if grep -qE "^[[:space:]]*${key}[[:space:]]*=" "${conf}"; then
+            sed -i '' "/^[[:space:]]*${key}[[:space:]]*=/d" "${conf}"
+            echo "    - removed: ${key} (now per-interface only)"
+            changed=1
+        fi
+    }
+
     # v0.1.0+: required global keys
-    add_global_key dhcp_backend isc  "DHCP backend: isc | kea | dnsmasq | none"
     add_global_key heartbeat    1    "Seconds between heartbeat sends"
     add_global_key timeout      3    "Seconds of peer silence before MASTER promotion"
     add_global_key preempt      yes  "Yield MASTER to higher-priority peer: yes | no"
 
-    # per-iface dhcp_backend (v0.1.7+) is optional — daemon inherits global if absent
-    # No migration needed; omitting it is valid.
+    # v0.1.7+: global dhcp_backend removed — configure per [iface] block instead
+    remove_global_key dhcp_backend
 
     if [ "${changed}" -eq 1 ]; then
         echo "    Config updated — review ${conf} before restarting."

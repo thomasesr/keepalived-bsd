@@ -24,16 +24,6 @@ timeout     = 3
 # If 'no':  hold MASTER until local process restarts.
 preempt     = yes
 
-# DHCP backend to start (MASTER) / stop (BACKUP).
-# The backend daemon is controlled as a whole — not per interface.
-#
-#   isc      ISC dhcpd (legacy OPNsense default)   configctl dhcpd restart|stop
-#   kea      Kea DHCPv4 (requires os-kea plugin)   configctl kea restart|stop
-#   dnsmasq  dnsmasq in DHCP mode                  configctl dnsmasq restart|stop
-#   none     No automatic DHCP control (manage it yourself)
-#
-dhcp_backend = isc
-
 # --- Interface sections ---
 # One [iface <name>] block per interface that needs a VIP + DHCP toggle.
 # <name> must be the exact FreeBSD interface name (em0, igb0, vtnet0, etc.)
@@ -47,11 +37,10 @@ vip          = 10.0.0.1/24
 # Use this alias in firewall rules that should match the VIP address.
 # alias      = keepalived_vip_em0
 
-# Per-interface DHCP backend override (optional).
-# Omit or set to 'global' to inherit the [global] dhcp_backend value.
-# dhcp_backend = global   # isc | kea | dnsmasq | none | global
+# DHCP backend for this interface. Defaults to isc if omitted.
+# dhcp_backend = isc      # isc | kea | dnsmasq | none
 
 # [iface em1]
 # vip          = 192.168.100.1/24
 # alias        = keepalived_vip_em1
-# dhcp_backend = dnsmasq
+# dhcp_backend = dnsmasq   # isc | kea | dnsmasq | none
