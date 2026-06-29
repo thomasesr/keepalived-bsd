@@ -41,8 +41,7 @@ service keepalived_bsd start
 
 ## Changes
 
-- `f2e3ce2` feat(ui): Apply button now generates `keepalived-bsd.conf` from the web UI model and restarts the daemon — Save and daemon config are no longer disconnected
-- `205e200` fix(config): install.sh migration removes legacy global `dhcp_backend` from existing configs; daemon defaults to ISC per-iface if omitted
+- `096794f` fix(plugin): install plugins.inc.d and register privileges — fixes configd "action not found" errors and adds plugin to System > Access > Privileges
 
 ## Checksums
 
