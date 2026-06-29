@@ -41,7 +41,7 @@ service keepalived_bsd start
 
 ## Changes
 
-- `fa3b0e0` fix(acl): add missing `<name>` element to ACL.xml — privilege entry now appears in System > Access > Privileges for user/group assignment
+- `3711b6d` feat(install): purge old plugin/script files before reinstalling — prevents stale files from prior versions persisting across upgrades
 
 ## Checksums
 
