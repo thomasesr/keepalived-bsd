@@ -41,7 +41,7 @@ service keepalived_bsd start
 
 ## Changes
 
-- `3711b6d` feat(install): purge old plugin/script files before reinstalling — prevents stale files from prior versions persisting across upgrades
+- `02e1454` fix(daemon): write PID file on daemonize so `service keepalived_bsd status` reports correctly; install missing reconfigure.php via `make install-opnsense` so the configd `keepalived.reconfigure` action works on source builds
 
 ## Checksums
 
