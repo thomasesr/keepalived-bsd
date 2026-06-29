@@ -8,6 +8,7 @@ return [
     'flat'    => [
         'usr/local/sbin/keepalived-bsd',
         'usr/local/etc/rc.d/keepalived_bsd',
+        'usr/local/etc/inc/plugins.inc.d/keepalived.inc',
         'usr/local/opnsense/mvc/app/controllers/OPNsense/Keepalived',
         'usr/local/opnsense/mvc/app/models/OPNsense/Keepalived',
         'usr/local/opnsense/mvc/app/views/OPNsense/Keepalived',

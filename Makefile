@@ -101,6 +101,12 @@ install-opnsense:
 	    $(DESTDIR)$(LIBEXECDIR)/alias-update.php
 
 	@echo "OPNsense plugin files installed. Register plugin via +PLUGIN.php if not using ports."
+	@if [ -z "$(DESTDIR)" ] && command -v service >/dev/null 2>&1; then \
+		echo "Reloading configd..."; \
+		service configd restart; \
+	else \
+		echo "Skipping configd restart (DESTDIR set or service unavailable). Run: service configd restart"; \
+	fi
 
 # ── convenience ───────────────────────────────────────────────────────────────
 

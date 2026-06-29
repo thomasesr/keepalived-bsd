@@ -69,6 +69,6 @@ class SettingsController extends ApiMutableModelControllerBase
     /* POST /api/keepalived/settings/delInterface/<uuid> */
     public function delInterfaceAction($uuid)
     {
-        return $this->delBase('interface', 'interfaces.interface', $uuid);
+        return $this->delBase($uuid, 'interface', 'interfaces.interface');
     }
 }

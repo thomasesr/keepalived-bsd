@@ -92,9 +92,22 @@ echo "--- OPNsense plugin"
 fetch -q -o /tmp/opnsense-plugin.tar.gz "${BASE_URL}/opnsense-plugin.tar.gz"
 install -d "${OPNSBASE}"
 tar -xzf /tmp/opnsense-plugin.tar.gz -C "${OPNSBASE}"
+
+# plugins.inc.d lands outside OPNSBASE — move it to the correct path
+install -d /usr/local/etc/inc/plugins.inc.d
+if [ -f "${OPNSBASE}/etc/inc/plugins.inc.d/keepalived.inc" ]; then
+    install -m 0644 "${OPNSBASE}/etc/inc/plugins.inc.d/keepalived.inc" \
+        /usr/local/etc/inc/plugins.inc.d/keepalived.inc
+    rm -rf "${OPNSBASE}/etc"
+fi
+
 rm -rf /tmp/opnsense_cache
 service configd restart
 echo "    configd restarted"
+# Restart php-fpm to clear opcache/realpath cache so new menu.xml is found
+/usr/local/etc/rc.d/php-fpm onerestart 2>/dev/null || \
+    service php-fpm onerestart 2>/dev/null || true
+echo "    php-fpm restarted"
 
 # ── cleanup ───────────────────────────────────────────────────────────────────
 rm -f /tmp/keepalived-bsd \
