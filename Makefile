@@ -51,9 +51,10 @@ install-rc:
 
 # ── OPNSense plugin ───────────────────────────────────────────────────────────
 
-OPNS_MVC   = $(DESTDIR)$(OPNSBASE)/mvc/app
-OPNS_SVC   = $(DESTDIR)$(OPNSBASE)/service/conf/actions.d
-OPNS_INC   = $(DESTDIR)$(PREFIX)/etc/inc/plugins.inc.d
+OPNS_MVC     = $(DESTDIR)$(OPNSBASE)/mvc/app
+OPNS_SVC     = $(DESTDIR)$(OPNSBASE)/service/conf/actions.d
+OPNS_INC     = $(DESTDIR)$(PREFIX)/etc/inc/plugins.inc.d
+OPNS_SCRIPTS = $(DESTDIR)$(OPNSBASE)/scripts
 
 install-opnsense:
 	# plugin registration hook
@@ -90,6 +91,11 @@ install-opnsense:
 	install -d $(OPNS_MVC)/views/OPNsense/Keepalived
 	install -m 0644 opnsense/mvc/app/views/OPNsense/Keepalived/index.volt \
 	    $(OPNS_MVC)/views/OPNsense/Keepalived/index.volt
+
+	# reconfigure script (called by configd keepalived.reconfigure action)
+	install -d $(OPNS_SCRIPTS)/OPNsense/Keepalived
+	install -m 0755 opnsense/scripts/OPNsense/Keepalived/reconfigure.php \
+	    $(OPNS_SCRIPTS)/OPNsense/Keepalived/reconfigure.php
 
 	# dhcp helper scripts
 	install -d $(DESTDIR)$(LIBEXECDIR)
@@ -130,4 +136,5 @@ uninstall-opnsense:
 	rm -rf $(OPNS_MVC)/controllers/OPNsense/Keepalived
 	rm -rf $(OPNS_MVC)/views/OPNsense/Keepalived
 	rm -f  $(OPNS_SVC)/actions_keepalived.conf
+	rm -rf $(OPNS_SCRIPTS)/OPNsense/Keepalived
 	rm -rf $(DESTDIR)$(LIBEXECDIR)

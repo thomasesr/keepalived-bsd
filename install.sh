@@ -121,6 +121,12 @@ if [ -f "${OPNSBASE}/etc/inc/plugins.inc.d/keepalived.inc" ]; then
     rm -rf "${OPNSBASE}/etc"
 fi
 
+if [ ! -f "${OPNSBASE}/service/conf/actions.d/actions_keepalived.conf" ]; then
+    echo "ERROR: actions_keepalived.conf not found after extraction — configd actions will not work" >&2
+    echo "       Check that the release tar is intact and re-run install.sh" >&2
+    exit 1
+fi
+
 rm -rf /tmp/opnsense_cache
 service configd restart
 echo "    configd restarted"

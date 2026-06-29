@@ -9,6 +9,7 @@
 #include "state.h"
 
 #define DEFAULT_CONF "/usr/local/etc/keepalived-bsd.conf"
+#define PIDFILE      "/var/run/keepalived_bsd.pid"
 
 static volatile int g_running = 1;
 
@@ -28,6 +29,14 @@ static void daemonize(void)
     freopen("/dev/null", "r", stdin);
     freopen("/dev/null", "w", stdout);
     freopen("/dev/null", "w", stderr);
+}
+
+static void write_pidfile(void)
+{
+    FILE *f = fopen(PIDFILE, "w");
+    if (!f) return;
+    fprintf(f, "%d\n", (int)getpid());
+    fclose(f);
 }
 
 static void usage(const char *argv0)
@@ -69,8 +78,10 @@ int main(int argc, char *argv[])
     signal(SIGINT,  sig_handler);
     signal(SIGHUP,  SIG_IGN);
 
-    if (!foreground)
+    if (!foreground) {
         daemonize();
+        write_pidfile();
+    }
 
     state_init(&state, &cfg);
     state_run(&state);  /* blocks until signal */
