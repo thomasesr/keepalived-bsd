@@ -41,7 +41,9 @@ service keepalived_bsd start
 
 ## Changes
 
-- `02e1454` fix(daemon): write PID file on daemonize so `service keepalived_bsd status` reports correctly; install missing reconfigure.php via `make install-opnsense` so the configd `keepalived.reconfigure` action works on source builds
+- `02e1454` fix(daemon): write PID file on daemonize so `service keepalived_bsd status` reports correctly; install missing reconfigure.php via `make install-opnsense`
+- `f643ddc` fix(configd): remove module prefix from action section names — `[keepalived.start]` → `[start]`; old format registered as `keepalived.keepalived.start` and crashed all configd actions system-wide
+- `b9cd1a4` fix(plugin): correct delBase arg order in delInterfaceAction; add scripts dir to +PLUGIN.php flat list
 
 ## Checksums
 
