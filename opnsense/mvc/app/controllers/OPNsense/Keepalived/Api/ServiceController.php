@@ -42,4 +42,14 @@ class ServiceController extends ApiControllerBase
             'response' => $response,
         ];
     }
+
+    /* POST /api/keepalived/service/apply
+     * Generates /usr/local/etc/keepalived-bsd.conf from the stored model
+     * and restarts the daemon if enabled. */
+    public function applyAction()
+    {
+        $backend  = new Backend();
+        $response = trim($backend->configdRun('keepalived reconfigure'));
+        return ['result' => 'ok', 'response' => $response];
+    }
 }

@@ -60,13 +60,12 @@
                 </alias>
                 <dhcp_backend type="OptionField">
                     <Required>N</Required>
-                    <Default>global</Default>
+                    <Default>none</Default>
                     <OptionValues>
-                        <global>Global setting</global>
+                        <none>None</none>
                         <isc>ISC DHCP (dhcpd)</isc>
                         <kea>Kea DHCPv4</kea>
                         <dnsmasq>dnsmasq</dnsmasq>
-                        <none>None</none>
                     </OptionValues>
                 </dhcp_backend>
             </interface>

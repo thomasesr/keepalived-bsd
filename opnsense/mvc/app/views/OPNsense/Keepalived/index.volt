@@ -1,6 +1,18 @@
 <script>
 $(function () {
 
+    var pendingChanges = false;
+
+    function markPending() {
+        pendingChanges = true;
+        $('#apply-banner').slideDown();
+    }
+
+    function clearPending() {
+        pendingChanges = false;
+        $('#apply-banner').slideUp();
+    }
+
     /*-- service status --*/
     function updateStatus() {
         $.get('/api/keepalived/service/status', function (data) {
@@ -48,7 +60,7 @@ $(function () {
         });
     }
 
-    function saveSettings() {
+    function saveSettings(callback) {
         var payload = { keepalived: {
             general: {
                 enabled:   $('#enabled').is(':checked') ? '1' : '0',
@@ -62,10 +74,36 @@ $(function () {
         }};
         $.post('/api/keepalived/settings/set', payload, function (data) {
             if (data.result === 'saved') {
-                $('#save-msg').fadeIn().delay(2000).fadeOut();
+                if (callback) {
+                    callback();
+                } else {
+                    markPending();
+                    $('#save-msg').fadeIn().delay(2000).fadeOut();
+                }
+            } else {
+                alert('{{ lang._('Save failed') }}: ' + JSON.stringify(data.validations || data));
             }
         });
     }
+
+    $('#btn-save').click(function () { saveSettings(); });
+
+    /*-- Apply: save then reconfigure --*/
+    $('#btn-apply').click(function () {
+        var $btn = $(this).prop('disabled', true).text('{{ lang._('Applying…') }}');
+        saveSettings(function () {
+            $.post('/api/keepalived/service/apply', function (data) {
+                clearPending();
+                $btn.prop('disabled', false).text('{{ lang._('Apply') }}');
+                updateStatus();
+                var msg = data.response || '{{ lang._('Done.') }}';
+                $('#apply-result').text(msg).fadeIn().delay(3000).fadeOut();
+            }).fail(function () {
+                $btn.prop('disabled', false).text('{{ lang._('Apply') }}');
+                alert('{{ lang._('Apply failed — check system log.') }}');
+            });
+        });
+    });
 
     /* OPNsense OptionField/InterfaceField return {key:{value,selected}} objects */
     function selectedKey(obj) {
@@ -90,7 +128,7 @@ $(function () {
         $('#modal-iface').val(uuid ? selectedKey(row.iface) : '');
         $('#modal-vip').val(uuid ? row.vip : '');
         $('#modal-alias').val(uuid ? (row.alias || '') : '');
-        $('#modal-dhcp-backend').val(uuid ? (selectedKey(row.dhcp_backend) || 'global') : 'global');
+        $('#modal-dhcp-backend').val(uuid ? (selectedKey(row.dhcp_backend) || 'none') : 'none');
         $('#modal-error').hide().text('');
         $('#iface-modal').modal('show');
     }
@@ -115,6 +153,7 @@ $(function () {
             $.post('/api/keepalived/settings/addInterface', payload, function (r) {
                 if (r.result === 'saved' || r.uuid) {
                     $('#iface-modal').modal('hide');
+                    markPending();
                     loadSettings();
                 } else {
                     $('#modal-error').text(JSON.stringify(r.validations || r)).show();
@@ -132,6 +171,7 @@ $(function () {
     function delInterface(uuid) {
         if (!confirm('{{ lang._('Remove this interface entry?') }}')) return;
         $.post('/api/keepalived/settings/delInterface/' + uuid, function () {
+            markPending();
             loadSettings();
         });
     }
@@ -142,7 +182,7 @@ $(function () {
         $.each(ifaces.interface || {}, function (uuid, row) {
             var backendKey = selectedKey(row.dhcp_backend);
             var backend = backendKey && backendKey !== 'global'
-                ? (selectedVal(row.dhcp_backend) || backendKey) : '{{ lang._('global') }}';
+                ? (selectedVal(row.dhcp_backend) || backendKey) : '{{ lang._('default (ISC)') }}';
             var btnEdit = $('<button class="btn btn-xs btn-default">').html('<i class="fa fa-pencil"></i> {{ lang._('Edit') }}')
                 .click((function (u, r) { return function () { openModal(u, r); }; })(uuid, row));
             var btnDel  = $('<button class="btn btn-xs btn-danger" style="margin-left:4px">').html('<i class="fa fa-trash"></i> {{ lang._('Remove') }}')
@@ -159,7 +199,6 @@ $(function () {
         });
     }
 
-    $('#btn-save').click(saveSettings);
     $('#btn-add-iface').click(function () { openModal(null, null); });
     $('#modal-btn-save').click(saveModal);
 
@@ -168,6 +207,12 @@ $(function () {
     loadInterfaceOptions();
 });
 </script>
+
+<!-- pending-changes banner -->
+<div id="apply-banner" class="alert alert-warning" style="display:none; margin:0; border-radius:0; border-left:0; border-right:0">
+    <i class="fa fa-exclamation-triangle"></i>
+    {{ lang._('Unsaved changes — click Apply to write the config file and restart the service.') }}
+</div>
 
 <!-- Interface add/edit modal -->
 <div class="modal fade" id="iface-modal" tabindex="-1" role="dialog">
@@ -203,11 +248,10 @@ $(function () {
                         <label class="col-sm-4 control-label">{{ lang._('DHCP Backend') }}</label>
                         <div class="col-sm-7">
                             <select id="modal-dhcp-backend" class="form-control">
-                                <option value="global">{{ lang._('Global setting') }}</option>
+                                <option value="none">{{ lang._('None') }}</option>
                                 <option value="isc">{{ lang._('ISC DHCP (dhcpd)') }}</option>
                                 <option value="kea">{{ lang._('Kea DHCPv4') }}</option>
                                 <option value="dnsmasq">{{ lang._('dnsmasq') }}</option>
-                                <option value="none">{{ lang._('None') }}</option>
                             </select>
                         </div>
                     </div>
@@ -270,9 +314,11 @@ $(function () {
             </div>
         </div>
         <div class="form-group">
-            <div class="col-sm-offset-3 col-sm-6">
-                <button type="button" id="btn-save" class="btn btn-primary">{{ lang._('Save') }}</button>
-                <span id="save-msg" class="text-success" style="display:none;margin-left:8px">{{ lang._('Saved.') }}</span>
+            <div class="col-sm-offset-3 col-sm-9">
+                <button type="button" id="btn-save" class="btn btn-default">{{ lang._('Save') }}</button>
+                <button type="button" id="btn-apply" class="btn btn-primary" style="margin-left:6px">{{ lang._('Apply') }}</button>
+                <span id="save-msg"     class="text-muted"    style="display:none; margin-left:8px">{{ lang._('Saved — click Apply to activate.') }}</span>
+                <span id="apply-result" class="text-success"  style="display:none; margin-left:8px"></span>
             </div>
         </div>
     </form>
