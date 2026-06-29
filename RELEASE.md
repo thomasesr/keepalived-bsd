@@ -41,7 +41,8 @@ service keepalived_bsd start
 
 ## Changes
 
-- `b7b0c29` fix(dhcp): guard against non-array `$config[$backend]` in toggle script — OPNsense omits the dhcpd/kea section from config.xml when unconfigured, causing a fatal "Cannot access offset of type string on string"
+- `f2e3ce2` feat(ui): Apply button now generates `keepalived-bsd.conf` from the web UI model and restarts the daemon — Save and daemon config are no longer disconnected
+- `205e200` fix(config): install.sh migration removes legacy global `dhcp_backend` from existing configs; daemon defaults to ISC per-iface if omitted
 
 ## Checksums
 
