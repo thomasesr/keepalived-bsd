@@ -23,8 +23,14 @@ require_once('config.inc');
 
 global $config;
 
+// $config[$backend] may be absent, an empty string, or an array depending on
+// whether the backend section has ever been written to config.xml. Normalise before use.
+if (!isset($config[$backend]) || !is_array($config[$backend])) {
+    $config[$backend] = [];
+}
+
 if ($action === 'enable') {
-    if (!isset($config[$backend][$iface])) {
+    if (!isset($config[$backend][$iface]) || !is_array($config[$backend][$iface])) {
         $config[$backend][$iface] = [];
     }
     $config[$backend][$iface]['enable'] = 1;
