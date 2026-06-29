@@ -41,7 +41,7 @@ service keepalived_bsd start
 
 ## Changes
 
-- `5056a69` feat(ui): modal add/edit for interface entries, version display, drop global DHCP backend
+- `5b0757c` fix(plugin): register service in plugins.inc.d and restart php-fpm so keepalived appears in OPNsense Services widget and nav menu after install
 
 ## Checksums
 
