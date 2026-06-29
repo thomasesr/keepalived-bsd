@@ -2,7 +2,7 @@
 
 return [
     'name'    => 'keepalived-bsd',
-    'version' => '0.1.0',
+    'version' => '0.1.8',
     'comment' => 'Keepalived-BSD VRRP-like HA daemon for OPNsense',
     'depends' => [],
     'flat'    => [

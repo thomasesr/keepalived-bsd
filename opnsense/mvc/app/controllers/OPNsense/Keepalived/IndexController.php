@@ -6,7 +6,8 @@ class IndexController extends \OPNsense\Base\IndexController
 {
     public function indexAction()
     {
-        $this->view->title = gettext('Keepalived HA');
+        $this->view->title   = gettext('Keepalived HA');
+        $this->view->version = '0.1.8';
         $this->view->pick('OPNsense/Keepalived/index');
     }
 }

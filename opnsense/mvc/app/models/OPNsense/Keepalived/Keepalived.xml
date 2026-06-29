@@ -41,16 +41,6 @@
             <preempt type="BooleanField">
                 <Default>1</Default>
             </preempt>
-            <dhcp_backend type="OptionField">
-                <Required>Y</Required>
-                <Default>isc</Default>
-                <OptionValues>
-                    <isc>ISC DHCP (dhcpd) — legacy default</isc>
-                    <kea>Kea DHCPv4 (os-kea plugin)</kea>
-                    <dnsmasq>dnsmasq</dnsmasq>
-                    <none>None — manual DHCP control</none>
-                </OptionValues>
-            </dhcp_backend>
         </general>
         <interfaces>
             <interface type="ArrayField">
