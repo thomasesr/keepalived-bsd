@@ -41,7 +41,9 @@ service keepalived_bsd start
 
 ## Changes
 
-- `8581a3d` fix: OPNsense 26.1 compatibility + daemon failover correctness — graceful SIGTERM shutdown now removes VIPs, disables DHCP, and sends a GOODBYE (the loop previously ignored SIGTERM); DHCP backends fixed for 26.1 (dnsmasq drop-in dir `/usr/local/etc/dnsmasq.conf.d` + restart, Kea via `OPNsense/Kea` model, firewall alias via the MVC `Firewall/Alias` tree); ISC marked legacy (moved to `os-isc-dhcp`, default backend now `none`); interface delete/edit fixed (`delBase` 2-arg); menu moved to canonical `Menu/Menu.xml`, ACL consolidated; invalid-VIP and split-brain hardening
+- `9ac7afe` fix(install): installer now stops a running daemon before reinstalling (clean SIGTERM so VIPs/DHCP are released), validates shipped plugin and config files, registers the plugin with pkg as `os-keepalived` so it shows on System > Firmware > Plugins, and clears the correct MVC cache so the Services > Keepalived menu refreshes
+- `493ff34` fix(webui): validate timeout/heartbeat and surface clear errors instead of silently accepting bad values
+- `81ec976` fix(configd): status action no longer errors when the daemon is stopped
 
 ## Checksums
 
