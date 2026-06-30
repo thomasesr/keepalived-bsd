@@ -41,9 +41,7 @@ service keepalived_bsd start
 
 ## Changes
 
-- `02e1454` fix(daemon): write PID file on daemonize so `service keepalived_bsd status` reports correctly; install missing reconfigure.php via `make install-opnsense`
-- `f643ddc` fix(configd): remove module prefix from action section names — `[keepalived.start]` → `[start]`; old format registered as `keepalived.keepalived.start` and crashed all configd actions system-wide
-- `b9cd1a4` fix(plugin): correct delBase arg order in delInterfaceAction; add scripts dir to +PLUGIN.php flat list
+- `8581a3d` fix: OPNsense 26.1 compatibility + daemon failover correctness — graceful SIGTERM shutdown now removes VIPs, disables DHCP, and sends a GOODBYE (the loop previously ignored SIGTERM); DHCP backends fixed for 26.1 (dnsmasq drop-in dir `/usr/local/etc/dnsmasq.conf.d` + restart, Kea via `OPNsense/Kea` model, firewall alias via the MVC `Firewall/Alias` tree); ISC marked legacy (moved to `os-isc-dhcp`, default backend now `none`); interface delete/edit fixed (`delBase` 2-arg); menu moved to canonical `Menu/Menu.xml`, ACL consolidated; invalid-VIP and split-brain hardening
 
 ## Checksums
 
