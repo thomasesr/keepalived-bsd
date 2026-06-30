@@ -26,14 +26,15 @@ class SettingsController extends ApiMutableModelControllerBase
             if (!empty($post['general'])) {
                 $mdl->general->setNodes($post['general']);
             }
+            /* performValidation() returns an iterable of Message objects, each
+             * exposing getField()/getMessage(). The previous isValid()/
+             * getMessages() calls do not exist on Message and fatally errored
+             * the request whenever validation actually failed (e.g. an
+             * out-of-range value), so the UI got a 500 with no message. */
             $valMsgs = $mdl->performValidation();
             $valErrs = [];
             foreach ($valMsgs as $msg) {
-                if (!$msg->isValid()) {
-                    foreach ($msg->getMessages() as $m) {
-                        $valErrs[$msg->getField()] = $m->getMessage();
-                    }
-                }
+                $valErrs[$msg->getField()] = $msg->getMessage();
             }
             if (empty($valErrs)) {
                 $mdl->serializeToConfig();

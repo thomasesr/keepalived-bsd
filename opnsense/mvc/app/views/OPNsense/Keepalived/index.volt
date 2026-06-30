@@ -57,10 +57,53 @@ $(function () {
             $('#timeout').val(g.timeout);
             $('#preempt').prop('checked', g.preempt == '1');
             loadInterfaces(data.keepalived.interfaces);
+            var errs = validateGeneral();   // surface constraint issues on populate
+            showGeneralError(errs.length ? errs.join('<br>') : '');
         });
     }
 
-    function saveSettings(callback) {
+    /* Client-side validation mirrors the model so bad values are caught with a
+       clear message instead of a raw server error or a stuck Apply button. */
+    var FIELD_RULES = {
+        port:      { label: '{{ lang._('UDP Port') }}',            min: 1, max: 65535 },
+        priority:  { label: '{{ lang._('Priority') }}',            min: 1, max: 255 },
+        heartbeat: { label: '{{ lang._('Heartbeat (s)') }}',       min: 1, max: 60 },
+        timeout:   { label: '{{ lang._('Failover Timeout (s)') }}', min: 1, max: 60 }
+    };
+
+    function showGeneralError(msg) {
+        if (msg) { $('#general-error').html(msg).show(); }
+        else     { $('#general-error').hide().empty(); }
+    }
+
+    function validateGeneral() {
+        var errs = [];
+        $.each(FIELD_RULES, function (id, r) {
+            var raw = $.trim($('#' + id).val());
+            var n = Number(raw);
+            if (raw === '' || !Number.isInteger(n) || n < r.min || n > r.max) {
+                errs.push(r.label + ' {{ lang._('must be an integer between') }} ' + r.min + ' {{ lang._('and') }} ' + r.max + '.');
+            }
+        });
+        if (!/^(\d{1,3}\.){3}\d{1,3}$/.test($.trim($('#peer').val()))) {
+            errs.push('{{ lang._('Peer IP must be a valid IPv4 address.') }}');
+        }
+        var hb = parseInt($('#heartbeat').val(), 10);
+        var to = parseInt($('#timeout').val(), 10);
+        if (Number.isInteger(hb) && Number.isInteger(to) && to <= hb) {
+            errs.push('{{ lang._('Failover Timeout must be greater than Heartbeat (recommended ≥ 3× heartbeat).') }}');
+        }
+        return errs;
+    }
+
+    function saveSettings(successCb, failCb) {
+        var errs = validateGeneral();
+        if (errs.length) {
+            showGeneralError(errs.join('<br>'));
+            if (failCb) failCb();
+            return;
+        }
+        showGeneralError('');
         var payload = { keepalived: {
             general: {
                 enabled:   $('#enabled').is(':checked') ? '1' : '0',
@@ -74,15 +117,21 @@ $(function () {
         }};
         $.post('/api/keepalived/settings/set', payload, function (data) {
             if (data.result === 'saved') {
-                if (callback) {
-                    callback();
+                if (successCb) {
+                    successCb();
                 } else {
                     markPending();
                     $('#save-msg').fadeIn().delay(2000).fadeOut();
                 }
             } else {
-                alert('{{ lang._('Save failed') }}: ' + JSON.stringify(data.validations || data));
+                var v = data.validations || {};
+                var msgs = $.map(v, function (m) { return m; });
+                showGeneralError(msgs.length ? msgs.join('<br>') : '{{ lang._('Save failed.') }}');
+                if (failCb) failCb();
             }
+        }).fail(function () {
+            showGeneralError('{{ lang._('Save failed — server error.') }}');
+            if (failCb) failCb();
         });
     }
 
@@ -90,19 +139,27 @@ $(function () {
 
     /*-- Apply: save then reconfigure --*/
     $('#btn-apply').click(function () {
-        var $btn = $(this).prop('disabled', true).text('{{ lang._('Applying…') }}');
+        var $btn = $(this);
+        function restore() { $btn.prop('disabled', false).text('{{ lang._('Apply') }}'); }
+        $btn.prop('disabled', true).text('{{ lang._('Applying…') }}');
         saveSettings(function () {
             $.post('/api/keepalived/service/apply', function (data) {
                 clearPending();
-                $btn.prop('disabled', false).text('{{ lang._('Apply') }}');
+                restore();
                 updateStatus();
                 var msg = data.response || '{{ lang._('Done.') }}';
                 $('#apply-result').text(msg).fadeIn().delay(3000).fadeOut();
             }).fail(function () {
-                $btn.prop('disabled', false).text('{{ lang._('Apply') }}');
+                restore();
                 alert('{{ lang._('Apply failed — check system log.') }}');
             });
-        });
+        }, restore);   /* failCb re-enables the button on validation/save failure */
+    });
+
+    /* Live feedback as the user edits, and on populate. */
+    $('#peer, #port, #priority, #heartbeat, #timeout').on('input change', function () {
+        var errs = validateGeneral();
+        showGeneralError(errs.length ? errs.join('<br>') : '');
     });
 
     /* OPNsense OptionField/InterfaceField return {key:{value,selected}} objects */
@@ -281,6 +338,7 @@ $(function () {
 
 <div class="content-box" style="padding:16px; margin-top:12px">
     <h3>{{ lang._('General Settings') }}</h3>
+    <div id="general-error" class="alert alert-danger" style="display:none"></div>
     <form class="form-horizontal">
         <div class="form-group">
             <label class="col-sm-3 control-label">{{ lang._('Enable') }}</label>
@@ -302,10 +360,12 @@ $(function () {
         <div class="form-group">
             <label class="col-sm-3 control-label">{{ lang._('Heartbeat (s)') }}</label>
             <div class="col-sm-2"><input type="number" id="heartbeat" class="form-control" min="1" max="60"></div>
+            <p class="col-sm-6 help-block">{{ lang._('Interval between heartbeats while MASTER (1–60).') }}</p>
         </div>
         <div class="form-group">
             <label class="col-sm-3 control-label">{{ lang._('Failover Timeout (s)') }}</label>
             <div class="col-sm-2"><input type="number" id="timeout" class="form-control" min="1" max="60"></div>
+            <p class="col-sm-6 help-block">{{ lang._('Peer silence before promoting to MASTER (1–60). Must be greater than Heartbeat; recommended ≥ 3× heartbeat.') }}</p>
         </div>
         <div class="form-group">
             <label class="col-sm-3 control-label">{{ lang._('Preempt') }}</label>
