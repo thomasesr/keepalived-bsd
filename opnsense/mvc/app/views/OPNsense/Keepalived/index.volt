@@ -182,7 +182,7 @@ $(function () {
         $.each(ifaces.interface || {}, function (uuid, row) {
             var backendKey = selectedKey(row.dhcp_backend);
             var backend = backendKey && backendKey !== 'global'
-                ? (selectedVal(row.dhcp_backend) || backendKey) : '{{ lang._('default (ISC)') }}';
+                ? (selectedVal(row.dhcp_backend) || backendKey) : '{{ lang._('none') }}';
             var btnEdit = $('<button class="btn btn-xs btn-default">').html('<i class="fa fa-pencil"></i> {{ lang._('Edit') }}')
                 .click((function (u, r) { return function () { openModal(u, r); }; })(uuid, row));
             var btnDel  = $('<button class="btn btn-xs btn-danger" style="margin-left:4px">').html('<i class="fa fa-trash"></i> {{ lang._('Remove') }}')
@@ -249,9 +249,9 @@ $(function () {
                         <div class="col-sm-7">
                             <select id="modal-dhcp-backend" class="form-control">
                                 <option value="none">{{ lang._('None') }}</option>
-                                <option value="isc">{{ lang._('ISC DHCP (dhcpd)') }}</option>
+                                <option value="dnsmasq">{{ lang._('dnsmasq (default on 26.1)') }}</option>
                                 <option value="kea">{{ lang._('Kea DHCPv4') }}</option>
-                                <option value="dnsmasq">{{ lang._('dnsmasq') }}</option>
+                                <option value="isc">{{ lang._('ISC DHCP (dhcpd) — legacy, requires os-isc-dhcp') }}</option>
                             </select>
                         </div>
                     </div>

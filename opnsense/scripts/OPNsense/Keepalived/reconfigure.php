@@ -56,8 +56,18 @@ foreach ($ka ? ($ka->interfaces->interface ?? []) : [] as $iface) {
     $out .= "\n";
 }
 
-file_put_contents(CONF_FILE, $out);
-chmod(CONF_FILE, 0640);
+// Write atomically: a partial config file could leave the daemon unstartable.
+$tmp = CONF_FILE . '.tmp';
+if (file_put_contents($tmp, $out) === false) {
+    fwrite(STDERR, "keepalived-bsd reconfigure: cannot write " . $tmp . "\n");
+    exit(1);
+}
+chmod($tmp, 0640);
+if (!rename($tmp, CONF_FILE)) {
+    fwrite(STDERR, "keepalived-bsd reconfigure: cannot replace " . CONF_FILE . "\n");
+    @unlink($tmp);
+    exit(1);
+}
 
 // Restart daemon if enabled; exit with daemon's exit code so configd reports errors.
 if (trim((string)($g->enabled ?? '0')) === '1') {

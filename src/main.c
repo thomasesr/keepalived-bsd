@@ -11,12 +11,25 @@
 #define DEFAULT_CONF "/usr/local/etc/keepalived-bsd.conf"
 #define PIDFILE      "/var/run/keepalived_bsd.pid"
 
-static volatile int g_running = 1;
+/* Defined here, declared extern in state.h so the event loop can poll it. */
+volatile sig_atomic_t g_running = 1;
 
 static void sig_handler(int sig)
 {
     (void)sig;
     g_running = 0;
+}
+
+/* sigaction without SA_RESTART so a signal interrupts usleep() and the
+ * event loop re-checks g_running promptly. */
+static void install_signal(int sig, void (*handler)(int))
+{
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(sig, &sa, NULL);
 }
 
 static void daemonize(void)
@@ -74,17 +87,24 @@ int main(int argc, char *argv[])
     }
     config_dump(&cfg);
 
-    signal(SIGTERM, sig_handler);
-    signal(SIGINT,  sig_handler);
-    signal(SIGHUP,  SIG_IGN);
+    install_signal(SIGTERM, sig_handler);
+    install_signal(SIGINT,  sig_handler);
+    install_signal(SIGHUP,  SIG_IGN);
+
+    /* Open the heartbeat socket before daemonizing so a bind failure
+     * (port in use, not root) aborts with a non-zero exit the parent
+     * process / rc.d can see, instead of a silently broken daemon. */
+    if (state_init(&state, &cfg) != 0) {
+        log_err("failed to initialize state (heartbeat socket)");
+        return 1;
+    }
 
     if (!foreground) {
         daemonize();
         write_pidfile();
     }
 
-    state_init(&state, &cfg);
-    state_run(&state);  /* blocks until signal */
+    state_run(&state);  /* blocks until SIGTERM/SIGINT, then tears down */
 
     return 0;
 }

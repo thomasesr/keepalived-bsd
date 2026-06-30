@@ -17,12 +17,7 @@ function keepalived_services()
     ];
 }
 
-function keepalived_privileges()
-{
-    return [
-        'page-services-keepalived' => [
-            'descr' => gettext('Keepalived HA'),
-            'match' => ['ui/keepalived*', 'api/keepalived/*'],
-        ],
-    ];
-}
+/* Page-access ACLs are defined canonically in the MVC model at
+ * mvc/app/models/OPNsense/Keepalived/ACL/ACL.xml. The legacy
+ * keepalived_privileges() hook is not read into the page-access map on
+ * OPNsense 26.1, so it is intentionally omitted here. */

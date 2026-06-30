@@ -59,7 +59,11 @@ logger.c     → openlog / vsyslog, mirrors to stderr in foreground mode
 - **Root required**: UDP bind + ioctl on interfaces.
 - **Config file**: `/usr/local/etc/keepalived-bsd.conf` — INI, `[global]` + one `[iface X]` block per managed interface.
 - **Wire protocol**: custom UDP (`HB_MAGIC = "KALV"`, versioned). Keep `hb_packet_t` backwards-compatible when adding fields; bump `HB_VERSION` on breaking changes.
-- **DHCP is per-interface**: `dhcp_enable_iface`/`dhcp_disable_iface` called for each interface in the FSM transition loop. Each backend modifies its own config and does a graceful reload — never a full kill. ISC + Kea: PHP script toggles `<enable>` flag in `config.xml` then calls `configctl <backend> restart`. dnsmasq: writes/removes `no-dhcp-interface=<iface>` drop-in to `/var/etc/dnsmasq.d/` then sends SIGHUP (hot reload, no restart, leases preserved).
+- **DHCP is per-interface** (call-wise): `dhcp_enable_iface`/`dhcp_disable_iface` called for each interface in the FSM transition loop. Backends on OPNsense 26.1:
+  - **dnsmasq** (26.1 default): writes/removes `no-dhcp-interface=<iface>` drop-in in `/usr/local/etc/dnsmasq.conf.d/` (the `conf-dir` OPNsense actually passes to dnsmasq — `*.conf`), then `configctl dnsmasq restart`. SIGHUP does **not** re-read conf-dir files, so a restart is required; modern dnsmasq re-reads its leases file on start so leases survive.
+  - **kea**: no per-interface enable exists — Kea is one service bound to an interface list. The toggle flips the global enable flag at `$config['OPNsense']['Kea']['dhcp4']['general']['enabled']`, then `configctl template reload OPNsense/Kea` + `configctl kea start|stop`. Effectively whole-service: MASTER serves, BACKUP stops.
+  - **ISC (dhcpd)** — *legacy*: moved out of core into the `os-isc-dhcp` plugin in 26.1 and absent on fresh installs. Toggles the legacy per-iface `$config['dhcpd'][<iface>]['enable']` then `configctl dhcpd restart`; the helper no-ops cleanly if the plugin is not installed.
+  - Default backend is `none` (fail closed) — an unknown/omitted backend manages no DHCP rather than silently invoking dead ISC.
 
 ## State machine
 

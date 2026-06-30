@@ -29,9 +29,13 @@ static int run_alias(const char *action, const char *alias_name, const char *ip)
         execv(ALIAS_SCRIPT, argv);
         _exit(127);
     }
-    if (waitpid(pid, &status, 0) < 0) {
-        log_err("alias: waitpid: %s", strerror(errno));
-        return -1;
+    {   /* retry on EINTR: signal handlers run without SA_RESTART */
+        pid_t w;
+        do { w = waitpid(pid, &status, 0); } while (w < 0 && errno == EINTR);
+        if (w < 0) {
+            log_err("alias: waitpid: %s", strerror(errno));
+            return -1;
+        }
     }
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
         log_warn("alias: %s %s %s failed (exit %d)",

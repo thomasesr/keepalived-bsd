@@ -23,7 +23,9 @@ static int ctl_sock(void)
 
 static uint32_t prefix_to_mask(uint8_t prefix)
 {
-    return prefix ? htonl(~((1u << (32 - prefix)) - 1)) : 0;
+    if (prefix == 0)  return 0;
+    if (prefix >= 32) return 0xffffffffu;          /* /32: all-ones, byte-order invariant */
+    return htonl(~((1u << (32 - prefix)) - 1));     /* 1..31: safe shift range */
 }
 
 int iface_vip_add(const iface_cfg_t *iface)

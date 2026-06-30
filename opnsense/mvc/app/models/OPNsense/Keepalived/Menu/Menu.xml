@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<menu>
+    <Services>
+        <Keepalived VisibleName="Keepalived HA" cssClass="fa fa-exchange-alt" url="/ui/keepalived" order="80"/>
+    </Services>
+</menu>

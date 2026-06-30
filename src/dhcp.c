@@ -18,11 +18,15 @@ static const char *SCRIPT[] = {
 
 dhcp_backend_t dhcp_backend_parse(const char *str)
 {
+    if (strcmp(str, "isc")     == 0) return DHCP_BACKEND_ISC;
     if (strcmp(str, "kea")     == 0) return DHCP_BACKEND_KEA;
     if (strcmp(str, "dnsmasq") == 0) return DHCP_BACKEND_DNSMASQ;
     if (strcmp(str, "none")    == 0) return DHCP_BACKEND_NONE;
     if (strcmp(str, "global")  == 0) return DHCP_BACKEND_INHERIT;
-    return DHCP_BACKEND_ISC;
+    /* Unknown / typo: fail closed. On OPNsense 26.1 ISC is no longer in core,
+     * so silently defaulting to ISC would invoke a dead backend. */
+    log_warn("dhcp: unknown backend '%s', treating as none", str);
+    return DHCP_BACKEND_NONE;
 }
 
 const char *dhcp_backend_name(dhcp_backend_t b)
@@ -68,9 +72,13 @@ static int run_script(const char *script, const char *action, const char *iface)
         execv(script, argv);
         _exit(127);
     }
-    if (waitpid(pid, &status, 0) < 0) {
-        log_err("dhcp: waitpid: %s", strerror(errno));
-        return -1;
+    {   /* retry on EINTR: signal handlers run without SA_RESTART */
+        pid_t w;
+        do { w = waitpid(pid, &status, 0); } while (w < 0 && errno == EINTR);
+        if (w < 0) {
+            log_err("dhcp: waitpid: %s", strerror(errno));
+            return -1;
+        }
     }
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
         log_warn("dhcp: %s %s %s failed (exit %d)",

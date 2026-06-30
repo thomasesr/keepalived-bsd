@@ -63,9 +63,9 @@
                     <Default>none</Default>
                     <OptionValues>
                         <none>None</none>
-                        <isc>ISC DHCP (dhcpd)</isc>
+                        <dnsmasq>dnsmasq (default on 26.1)</dnsmasq>
                         <kea>Kea DHCPv4</kea>
-                        <dnsmasq>dnsmasq</dnsmasq>
+                        <isc>ISC DHCP (dhcpd) — legacy</isc>
                     </OptionValues>
                 </dhcp_backend>
             </interface>

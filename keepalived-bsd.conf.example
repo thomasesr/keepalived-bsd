@@ -37,10 +37,12 @@ vip          = 10.0.0.1/24
 # Use this alias in firewall rules that should match the VIP address.
 # alias      = keepalived_vip_em0
 
-# DHCP backend for this interface. Defaults to isc if omitted.
-# dhcp_backend = isc      # isc | kea | dnsmasq | none
+# DHCP backend for this interface. Defaults to 'none' (no DHCP management) if
+# omitted. On OPNsense 26.1 the out-of-the-box backend is dnsmasq; ISC (dhcpd)
+# was moved out of core and needs the os-isc-dhcp plugin.
+# dhcp_backend = dnsmasq   # dnsmasq | kea | isc | none
 
 # [iface em1]
 # vip          = 192.168.100.1/24
 # alias        = keepalived_vip_em1
-# dhcp_backend = dnsmasq   # isc | kea | dnsmasq | none
+# dhcp_backend = dnsmasq   # dnsmasq | kea | isc | none

@@ -24,8 +24,11 @@ static int parse_vip(const char *str, struct in_addr *addr, uint8_t *prefix)
 
     slash = strchr(buf, '/');
     if (slash) {
+        int v = atoi(slash + 1);
         *slash = '\0';
-        *prefix = (uint8_t)atoi(slash + 1);
+        if (v < 0 || v > 32)   /* guard prefix_to_mask against UB shift */
+            return -1;
+        *prefix = (uint8_t)v;
     } else {
         *prefix = 32;
     }
@@ -46,7 +49,7 @@ int config_load(const char *path, config_t *cfg)
     cfg->heartbeat_sec = DEFAULT_HEARTBEAT;
     cfg->timeout_sec   = DEFAULT_TIMEOUT;
     cfg->preempt       = DEFAULT_PREEMPT;
-    cfg->dhcp_backend  = DHCP_BACKEND_ISC;
+    cfg->dhcp_backend  = DHCP_BACKEND_NONE; /* fail closed; ISC not in core on 26.1 */
 
     f = fopen(path, "r");
     if (!f) {
@@ -98,8 +101,14 @@ int config_load(const char *path, config_t *cfg)
             iface_cfg_t *ic = &cfg->ifaces[iface_idx];
             if (strcmp(key, "vip") == 0) {
                 strncpy(ic->vip_str, val, sizeof(ic->vip_str) - 1);
-                if (parse_vip(val, &ic->vip_addr, &ic->prefix_len) != 0)
-                    log_warn("config: invalid vip '%s'", val);
+                if (parse_vip(val, &ic->vip_addr, &ic->prefix_len) != 0) {
+                    /* Fail closed: a bad VIP would otherwise be installed as
+                     * 0.0.0.0 on failover, yielding a broken MASTER. */
+                    log_err("config: invalid vip '%s' on iface %s",
+                            val, ic->iface);
+                    fclose(f);
+                    return -1;
+                }
             } else if (strcmp(key, "dhcp_backend") == 0) {
                 ic->dhcp_backend = dhcp_backend_parse(val);
             } else if (strcmp(key, "alias") == 0) {
@@ -138,6 +147,13 @@ int config_load(const char *path, config_t *cfg)
     if (cfg->iface_count == 0) {
         log_err("config: at least one [iface] section required");
         return -1;
+    }
+    if (cfg->heartbeat_sec < 1) cfg->heartbeat_sec = DEFAULT_HEARTBEAT;
+    if (cfg->timeout_sec <= cfg->heartbeat_sec) {
+        log_warn("config: timeout (%ds) <= heartbeat (%ds) risks spurious "
+                 "failover; bumping timeout to %ds",
+                 cfg->timeout_sec, cfg->heartbeat_sec, cfg->heartbeat_sec * 3);
+        cfg->timeout_sec = cfg->heartbeat_sec * 3;
     }
 
     return 0;

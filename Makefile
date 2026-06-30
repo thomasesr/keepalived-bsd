@@ -67,19 +67,20 @@ install-opnsense:
 	install -m 0644 opnsense/service/conf/actions.d/actions_keepalived.conf \
 	    $(OPNS_SVC)/actions_keepalived.conf
 
-	# model + ACL
+	# model + ACL + menu
 	install -d $(OPNS_MVC)/models/OPNsense/Keepalived/ACL
+	install -d $(OPNS_MVC)/models/OPNsense/Keepalived/Menu
 	install -m 0644 opnsense/mvc/app/models/OPNsense/Keepalived/Keepalived.php \
 	    $(OPNS_MVC)/models/OPNsense/Keepalived/Keepalived.php
 	install -m 0644 opnsense/mvc/app/models/OPNsense/Keepalived/Keepalived.xml \
 	    $(OPNS_MVC)/models/OPNsense/Keepalived/Keepalived.xml
 	install -m 0644 opnsense/mvc/app/models/OPNsense/Keepalived/ACL/ACL.xml \
 	    $(OPNS_MVC)/models/OPNsense/Keepalived/ACL/ACL.xml
+	install -m 0644 opnsense/mvc/app/models/OPNsense/Keepalived/Menu/Menu.xml \
+	    $(OPNS_MVC)/models/OPNsense/Keepalived/Menu/Menu.xml
 
-	# controllers + menu
+	# controllers
 	install -d $(OPNS_MVC)/controllers/OPNsense/Keepalived/Api
-	install -m 0644 opnsense/mvc/app/controllers/OPNsense/Keepalived/menu.xml \
-	    $(OPNS_MVC)/controllers/OPNsense/Keepalived/menu.xml
 	install -m 0644 opnsense/mvc/app/controllers/OPNsense/Keepalived/IndexController.php \
 	    $(OPNS_MVC)/controllers/OPNsense/Keepalived/IndexController.php
 	install -m 0644 opnsense/mvc/app/controllers/OPNsense/Keepalived/Api/ServiceController.php \
