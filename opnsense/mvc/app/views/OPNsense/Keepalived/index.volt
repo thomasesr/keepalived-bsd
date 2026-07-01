@@ -46,6 +46,68 @@ $(function () {
         });
     }
 
+    /*-- VIP rows (address + device dropdown) --*/
+    var vipDevices = {};   /* bsd ifname -> label */
+    function loadVipDevices() {
+        $.get('/api/keepalived/settings/getVipDevices', function (data) {
+            vipDevices = data.devices || {};
+        });
+    }
+    /* Build the device <select> for one VIP row. dev = raw BSD ifname to preselect. */
+    function vipDeviceSelect(dev) {
+        var sel = $('<select class="form-control input-sm modal-vip-dev">');
+        sel.append($('<option>').val('').text('{{ lang._('(advert interface)') }}'));
+        var known = false;
+        $.each(vipDevices, function (bsd, label) {
+            sel.append($('<option>').val(bsd).text(label + ' (' + bsd + ')'));
+            if (bsd === dev) known = true;
+        });
+        /* Preserve a dev that isn't an OPNsense-managed iface (e.g. a raw VLAN sub-if). */
+        if (dev && !known) sel.append($('<option>').val(dev).text(dev));
+        sel.val(dev || '');
+        return sel;
+    }
+    /* addr = "x.x.x.x/prefix", dev = bsd ifname, label = optional keepalived label token */
+    function addVipRow(addr, dev, label) {
+        var addrInput = $('<input type="text" class="form-control input-sm modal-vip-addr" placeholder="192.168.1.2/24">').val(addr || '');
+        var devSel = vipDeviceSelect(dev || '');
+        var del = $('<button type="button" class="btn btn-xs btn-danger"><i class="fa fa-trash"></i></button>')
+            .click(function () { $(this).closest('tr').remove(); });
+        var tr = $('<tr>')
+            .append($('<td>').append(addrInput), $('<td>').append(devSel), $('<td>').append(del));
+        if (label) tr.data('label', label);   /* round-trip a label token we don't expose */
+        $('#modal-vip-tbody').append(tr);
+    }
+    /* Parse the stored newline string into rows. Token form: ADDR [dev IF] [label L]. */
+    function renderVipRows(raw) {
+        $('#modal-vip-tbody').empty();
+        var lines = vipLines(raw);
+        $.each(lines, function (i, line) {
+            var toks = line.split(/\s+/), addr = toks.shift(), dev = '', label = '';
+            for (var j = 0; j < toks.length; j++) {
+                if (toks[j] === 'dev' && toks[j + 1]) { dev = toks[++j]; }
+                else if (toks[j] === 'label' && toks[j + 1]) { label = toks[++j]; }
+            }
+            addVipRow(addr, dev, label);
+        });
+        if (!lines.length) addVipRow('', '', '');   /* always show one empty row */
+    }
+    /* Serialize rows back into the newline string the model/reconfigure expect. */
+    function collectVips() {
+        var out = [];
+        $('#modal-vip-tbody tr').each(function () {
+            var addr = $.trim($(this).find('.modal-vip-addr').val());
+            if (!addr) return;
+            var dev = $(this).find('.modal-vip-dev').val();
+            var label = $(this).data('label');
+            var line = addr;
+            if (dev) line += ' dev ' + dev;
+            if (label) line += ' label ' + label;
+            out.push(line);
+        });
+        return out.join('\n');
+    }
+
     function showGeneralError(msg) {
         if (msg) { $('#general-error').html(msg).show(); }
         else     { $('#general-error').hide().empty(); }
@@ -161,7 +223,7 @@ $(function () {
         $('#modal-priority').val(populate ? row.priority : '100');
         $('#modal-advint').val(populate ? row.advert_int : '5');
         $('#modal-preempt').prop('checked', populate ? (row.preempt == '1' || selectedKey(row.preempt) == '1') : true);
-        $('#modal-vip').val(populate ? vipLines(row.vip).join('\n') : '');
+        renderVipRows(populate ? row.vip : '');
         $('#modal-alias').val(populate ? (row.alias || '') : '');
         $('#modal-dhcp').val(populate ? (selectedKey(row.dhcp_backend) || 'none') : 'none');
         $('#modal-error').hide().text('');
@@ -180,7 +242,7 @@ $(function () {
         var src = $.trim($('#modal-src').val());
         var peer = $.trim($('#modal-peer').val());
         var vrid = $.trim($('#modal-vrid').val());
-        var vip = $.trim($('#modal-vip').val());
+        var vip = collectVips();
         if (!name || !iface || !src || !peer || !vrid || !vip) {
             $('#modal-error').text('{{ lang._('Name, interface, source/peer IP, VRID and at least one VIP are required.') }}').show();
             return;
@@ -223,6 +285,7 @@ $(function () {
     }
 
     $('#btn-add-inst').click(function () { openModal(null, null); });
+    $('#modal-vip-add').click(function () { addVipRow('', '', ''); });
     $('#modal-btn-save').click(saveModal);
 
     /*-- VRRP status table (2s poller) --*/
@@ -265,6 +328,7 @@ $(function () {
     updateStatus();
     loadSettings();
     loadInterfaceOptions();
+    loadVipDevices();
     loadVrrpStatus();
 });
 </script>
@@ -331,8 +395,19 @@ $(function () {
                     </div>
                     <div class="form-group">
                         <label class="col-sm-4 control-label">{{ lang._('Virtual IPs') }}</label>
-                        <div class="col-sm-7"><textarea id="modal-vip" class="form-control" rows="3" placeholder="192.165.1.2/24 dev igb0"></textarea>
-                            <span class="help-block">{{ lang._('One per line: ADDR/prefix [dev IF] [label L]. dev defaults to the advert interface.') }}</span>
+                        <div class="col-sm-7">
+                            <table class="table table-condensed" style="margin-bottom:6px">
+                                <thead><tr>
+                                    <th>{{ lang._('Address / Prefix') }}</th>
+                                    <th>{{ lang._('Device') }}</th>
+                                    <th style="width:1%"></th>
+                                </tr></thead>
+                                <tbody id="modal-vip-tbody"></tbody>
+                            </table>
+                            <button type="button" id="modal-vip-add" class="btn btn-xs btn-default">
+                                <i class="fa fa-plus"></i> {{ lang._('Add VIP') }}
+                            </button>
+                            <span class="help-block">{{ lang._('One IP per row. Device defaults to the advert interface.') }}</span>
                         </div>
                     </div>
                     <div class="form-group">

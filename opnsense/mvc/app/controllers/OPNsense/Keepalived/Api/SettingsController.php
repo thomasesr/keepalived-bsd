@@ -61,6 +61,27 @@ class SettingsController extends ApiMutableModelControllerBase
         return ['interfaces' => $ifaces];
     }
 
+    /* GET /api/keepalived/settings/getVipDevices
+     * Real FreeBSD device (igb0, igb0.10) => label, for the VIP "dev" dropdown.
+     * VIP dev is a raw BSD ifname (reconfigure.php writes it verbatim), so unlike
+     * getInterfaces (OPNsense keys) this maps to the underlying <if>. */
+    public function getVipDevicesAction()
+    {
+        $config = Config::getInstance()->object();
+        $devices = [];
+        if (isset($config->interfaces)) {
+            foreach ($config->interfaces->children() as $ifname => $ifcfg) {
+                $bsd = trim((string)($ifcfg->if ?? ''));
+                if ($bsd === '') {
+                    continue;
+                }
+                $descr = !empty($ifcfg->descr) ? (string)$ifcfg->descr : strtoupper((string)$ifname);
+                $devices[$bsd] = $descr;
+            }
+        }
+        return ['devices' => $devices];
+    }
+
     /* POST /api/keepalived/settings/addInstance */
     public function addInstanceAction()
     {
