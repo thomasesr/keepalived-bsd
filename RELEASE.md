@@ -48,10 +48,9 @@ service keepalived_bsd start
 
 ## Changes
 
-Since **v0.2.0**, newest first:
+Since **v0.2.1**, newest first:
 
-- `c0e91db` fix(carp): unload kernel CARP so inbound VRRPv3 adverts reach the daemon. CARP and VRRP both use IP protocol 112; on FreeBSD `carp.ko` owns the proto-112 handler and silently drops every inbound advert (receive stuck at 0, both nodes go MASTER). The rc.d prestart unloads `carp.ko` before start, and the daemon re-checks every 10 s so a mid-run reload can't re-break receive. **Incompatible with OPNsense CARP virtual IPs** — the UI warns on enable.
-- `2bf033d` feat(ui): add a **Clone** button to the VRRP instances grid to duplicate an existing instance's settings into the add/edit modal.
+- `12b37f3` feat(ui): replace the freeform VIP textarea with a per-row table — address/prefix textbox plus a device dropdown listing OPNsense interfaces by label. New `getVipDevices` API maps each interface to its FreeBSD device (`igb0`, `igb0.10`); the on-disk config format is unchanged, so existing instances round-trip untouched.
 
 ## Checksums
 
