@@ -1,62 +1,105 @@
 <?xml version="1.0"?>
 <model>
     <mount>//OPNsense/keepalived</mount>
-    <version>1.0.0</version>
-    <description>Keepalived-BSD HA Configuration</description>
+    <version>2.0.0</version>
+    <description>Keepalived-BSD VRRPv3 HA Configuration</description>
     <items>
         <general>
             <enabled type="BooleanField">
                 <Default>0</Default>
                 <Required>Y</Required>
             </enabled>
-            <peer type="TextField">
-                <Required>Y</Required>
-                <Mask>/^(\d{1,3}\.){3}\d{1,3}$/</Mask>
-                <ValidationMessage>Enter a valid IPv4 peer address</ValidationMessage>
-            </peer>
-            <port type="IntegerField">
-                <Required>Y</Required>
-                <Default>5405</Default>
-                <MinimumValue>1</MinimumValue>
-                <MaximumValue>65535</MaximumValue>
-            </port>
             <priority type="IntegerField">
-                <Required>Y</Required>
+                <Required>N</Required>
                 <Default>100</Default>
                 <MinimumValue>1</MinimumValue>
-                <MaximumValue>255</MaximumValue>
+                <MaximumValue>254</MaximumValue>
+                <ValidationMessage>Fallback priority: 1–254.</ValidationMessage>
             </priority>
-            <heartbeat type="IntegerField">
-                <Required>Y</Required>
-                <Default>1</Default>
-                <MinimumValue>1</MinimumValue>
-                <MaximumValue>60</MaximumValue>
-            </heartbeat>
-            <timeout type="IntegerField">
-                <Required>Y</Required>
-                <Default>3</Default>
-                <MinimumValue>1</MinimumValue>
-                <MaximumValue>60</MaximumValue>
-            </timeout>
-            <preempt type="BooleanField">
-                <Default>1</Default>
-            </preempt>
+            <dhcp_backend type="OptionField">
+                <Required>N</Required>
+                <Default>none</Default>
+                <OptionValues>
+                    <none>None</none>
+                    <dnsmasq>dnsmasq (default on 26.1)</dnsmasq>
+                    <kea>Kea DHCPv4</kea>
+                    <isc>ISC DHCP (dhcpd) — legacy</isc>
+                </OptionValues>
+            </dhcp_backend>
         </general>
-        <interfaces>
-            <interface type="ArrayField">
-                <iface type="InterfaceField">
+        <vrrp_instances>
+            <vrrp_instance type="ArrayField">
+                <name type="TextField">
+                    <Required>Y</Required>
+                    <Mask>/^[a-zA-Z0-9_]{1,31}$/</Mask>
+                    <ValidationMessage>Name: letters, digits, underscore (max 31).</ValidationMessage>
+                    <Constraints>
+                        <check001>
+                            <ValidationMessage>Instance name must be unique.</ValidationMessage>
+                            <type>UniqueConstraint</type>
+                        </check001>
+                    </Constraints>
+                </name>
+                <state type="OptionField">
+                    <Required>Y</Required>
+                    <Default>BACKUP</Default>
+                    <OptionValues>
+                        <BACKUP>BACKUP</BACKUP>
+                        <MASTER>MASTER</MASTER>
+                    </OptionValues>
+                </state>
+                <interface type="InterfaceField">
                     <Required>Y</Required>
                     <AllowDynamic>N</AllowDynamic>
-                </iface>
+                </interface>
+                <unicast_src_ip type="TextField">
+                    <Required>Y</Required>
+                    <Mask>/^(\d{1,3}\.){3}\d{1,3}$/</Mask>
+                    <ValidationMessage>Enter a valid IPv4 source address.</ValidationMessage>
+                </unicast_src_ip>
+                <unicast_peer type="TextField">
+                    <Required>Y</Required>
+                    <Mask>/^(\d{1,3}\.){3}\d{1,3}$/</Mask>
+                    <ValidationMessage>Enter a valid IPv4 peer address.</ValidationMessage>
+                </unicast_peer>
+                <virtual_router_id type="IntegerField">
+                    <Required>Y</Required>
+                    <MinimumValue>1</MinimumValue>
+                    <MaximumValue>255</MaximumValue>
+                    <ValidationMessage>VRID: 1–255.</ValidationMessage>
+                    <Constraints>
+                        <check001>
+                            <ValidationMessage>Virtual Router ID must be unique.</ValidationMessage>
+                            <type>UniqueConstraint</type>
+                        </check001>
+                    </Constraints>
+                </virtual_router_id>
+                <priority type="IntegerField">
+                    <Required>N</Required>
+                    <Default>100</Default>
+                    <MinimumValue>1</MinimumValue>
+                    <MaximumValue>255</MaximumValue>
+                    <ValidationMessage>Priority: 1–254 (255 = address owner).</ValidationMessage>
+                </priority>
+                <advert_int type="IntegerField">
+                    <Required>Y</Required>
+                    <Default>5</Default>
+                    <MinimumValue>1</MinimumValue>
+                    <MaximumValue>255</MaximumValue>
+                    <ValidationMessage>Advertisement interval in seconds: 1–255.</ValidationMessage>
+                </advert_int>
+                <preempt type="BooleanField">
+                    <Default>1</Default>
+                </preempt>
                 <vip type="TextField">
                     <Required>Y</Required>
-                    <Mask>/^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/</Mask>
-                    <ValidationMessage>Enter VIP as x.x.x.x/prefix</ValidationMessage>
+                    <Mask>/^[0-9a-zA-Z.\/,_ \t\r\n-]+$/</Mask>
+                    <ValidationMessage>One VIP per line: x.x.x.x/prefix [dev IF] [label L].</ValidationMessage>
                 </vip>
                 <alias type="TextField">
                     <Required>N</Required>
                     <Mask>/^[a-zA-Z0-9_]{0,64}$/</Mask>
-                    <ValidationMessage>Alias name: letters, digits, underscore only</ValidationMessage>
+                    <ValidationMessage>Alias name: letters, digits, underscore only.</ValidationMessage>
                 </alias>
                 <dhcp_backend type="OptionField">
                     <Required>N</Required>
@@ -68,7 +111,7 @@
                         <isc>ISC DHCP (dhcpd) — legacy</isc>
                     </OptionValues>
                 </dhcp_backend>
-            </interface>
-        </interfaces>
+            </vrrp_instance>
+        </vrrp_instances>
     </items>
 </model>

@@ -425,11 +425,20 @@ Each phase independently buildable + testable. One task at a time; each file wri
       — deferred to the box test pass
 
 ### Phase 9 — OPNsense model + UI
-- [ ] `Keepalived.xml`: `vrrp_instance` grid model (replaces global+iface fields)
-- [ ] `SettingsController`: `addInstance`/`delInstance`; config-template generator
-- [ ] `index.volt`: instance grid + add/edit modal + VIP sub-list
-- [ ] `index.volt`: VRRP Status table (8 cols) + `loadVrrpStatus()` 2s poller + stale flag
-- [ ] Test in browser: create instance, apply, status table populates/refreshes
+- [x] `Keepalived.xml`: `vrrp_instance` ArrayField grid (name, state, interface,
+      unicast_src/peer, vrid, priority, advert_int, preempt, vip, alias, dhcp_backend);
+      general = enabled + fallback priority/dhcp_backend. `UniqueConstraint` on name+vrid.
+      Model version bumped 1.0.0 → 2.0.0 (breaking). `Keepalived.php` stripped of the old
+      heartbeat/timeout cross-check (those fields are gone; it would have fatally errored)
+- [x] `SettingsController`: `addInstance`/`delInstance` (on `vrrp_instances.vrrp_instance`);
+      `reconfigure.php` rewritten as the `[global]`+`[vrrp_instance NAME]` generator
+      (InterfaceField → BSD ifname map; VIP textarea split on newline/comma → repeatable `vip=`)
+- [x] `index.volt`: instance grid + add/edit modal (12 fields incl. VIP textarea sub-list),
+      general settings box, service start/stop/restart
+- [x] `index.volt`: VRRP Status table (8 cols) + `loadVrrpStatus()` 2s poller + `written`-epoch
+      stale flag; MASTER→`label-success`, else `label-default`; `.text()` cells (XSS-safe)
+- [ ] **On-box:** `service configd restart`; create instance, apply, status table
+      populates/refreshes — deferred to the box test pass
 
 ### Phase 10 — Docs & release
 - [ ] Update `CLAUDE.md` (protocol, config model, file layout)
