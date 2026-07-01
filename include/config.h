@@ -16,21 +16,6 @@ typedef enum {
 } dhcp_backend_t;
 
 #define MAX_INSTANCES 8
-#define MAX_IFACES    8   /* legacy; see iface_cfg_t */
-
-/*
- * Legacy per-interface config from the KALV era. Retained only because dhcp.h
- * and iface.c still reference the type; both are rehooked to per-instance VIPs
- * in Phase 5, after which this struct is removed.
- */
-typedef struct {
-    char           iface[IFNAMSIZ];
-    char           vip_str[64];
-    struct in_addr vip_addr;
-    uint8_t        prefix_len;
-    dhcp_backend_t dhcp_backend;
-    char           alias_name[64];
-} iface_cfg_t;
 
 /* One VRRPv3 instance == one keepalived vrrp_instance block. */
 typedef struct {

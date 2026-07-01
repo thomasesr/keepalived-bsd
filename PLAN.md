@@ -378,11 +378,22 @@ Each phase independently buildable + testable. One task at a time; each file wri
 - [ ] **On-box:** one instance, no peer → promotes after Master_Down_Interval — deferred
 
 ### Phase 5 — Transition side-effects
-- [ ] Hook `iface.c` VIP add/del per instance (VIP on its own `dev`)
-- [ ] Hook `dhcp.c` enable/disable per instance transition
-- [ ] `arp.c`: gratuitous ARP via BPF on becoming Master (one gARP per VIP)
-- [ ] Shutdown: send priority-0 advert per Master instance, then release
-- [ ] Test: Master transition adds VIP + gARP visible on wire
+- [x] Hook `iface.c` VIP add/del per instance (VIP on its own `dev`) — retyped off
+      legacy `iface_cfg_t` to `vip_t`; VIP added to `vip->dev` (resolved to adv_if
+      by config when omitted)
+- [x] Hook `dhcp.c` enable/disable per instance transition — retyped to a bare
+      `iface` string; toggled once per distinct VIP interface (dedup in sidefx.c)
+- [x] `arp.c`: gratuitous ARP via BPF on becoming Master (one gARP per VIP) —
+      `/dev/bpf` + `BIOCSETIF`, AF_LINK MAC via `getifaddrs`, broadcast ARP request
+      (sender=target=VIP)
+- [x] Shutdown: send priority-0 advert per Master instance, then release — already
+      in `state_shutdown`; `enter_backup` now performs the real release
+- [x] Orchestration split into `sidefx.c` (`sidefx_enter_master/backup`) so `state.c`
+      stays portable/unit-testable (tests link no-op stubs); dropped legacy
+      `iface_cfg_t`/`MAX_IFACES` and dead `heartbeat.c/.h`; `alias.c` retyped to
+      `(alias_name, addr)`
+- [ ] **On-box:** Master transition adds VIP + gARP visible on wire — deferred to
+      the box build/test pass (needs FreeBSD ioctls + `/dev/bpf`)
 
 ### Phase 6 — Transport IPsec + integration vs real peer (`192.168.1.3`)
 - [ ] Bring up strongSwan transport SA `192.168.1.1↔192.168.1.3`, proto 112, PSK (§6)

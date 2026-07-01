@@ -46,34 +46,30 @@ static int run_alias(const char *action, const char *alias_name, const char *ip)
     return 0;
 }
 
-int alias_add_vip(const iface_cfg_t *iface)
+static int alias_update(const char *action, const char *alias_name,
+                        struct in_addr addr)
 {
     char ip[INET_ADDRSTRLEN];
 
-    if (iface->alias_name[0] == '\0')
-        return 0;
+    if (!alias_name || alias_name[0] == '\0')
+        return 0;                       /* alias management opted out */
 
-    if (!inet_ntop(AF_INET, &iface->vip_addr, ip, sizeof(ip))) {
-        log_err("alias: inet_ntop failed on %s", iface->iface);
+    if (!inet_ntop(AF_INET, &addr, ip, sizeof(ip))) {
+        log_err("alias: inet_ntop failed for alias %s", alias_name);
         return -1;
     }
 
-    log_info("alias: add %s to alias %s", ip, iface->alias_name);
-    return run_alias("add", iface->alias_name, ip);
+    log_info("alias: %s %s %s alias %s",
+             action, ip, strcmp(action, "add") == 0 ? "to" : "from", alias_name);
+    return run_alias(action, alias_name, ip);
 }
 
-int alias_del_vip(const iface_cfg_t *iface)
+int alias_add_vip(const char *alias_name, struct in_addr addr)
 {
-    char ip[INET_ADDRSTRLEN];
+    return alias_update("add", alias_name, addr);
+}
 
-    if (iface->alias_name[0] == '\0')
-        return 0;
-
-    if (!inet_ntop(AF_INET, &iface->vip_addr, ip, sizeof(ip))) {
-        log_err("alias: inet_ntop failed on %s", iface->iface);
-        return -1;
-    }
-
-    log_info("alias: del %s from alias %s", ip, iface->alias_name);
-    return run_alias("del", iface->alias_name, ip);
+int alias_del_vip(const char *alias_name, struct in_addr addr)
+{
+    return alias_update("del", alias_name, addr);
 }

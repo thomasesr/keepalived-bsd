@@ -3,9 +3,15 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include "state.h"
+#include "sidefx.h"
 
 /* state.c references this (normally defined in main.c). */
 volatile sig_atomic_t g_running = 1;
+
+/* state.c calls into sidefx.c (FreeBSD-only I/O); stub them for the pure
+ * FSM unit test so it links without the transition side-effect code. */
+void sidefx_enter_master(const vrrp_instance_t *in) { (void)in; }
+void sidefx_enter_backup(const vrrp_instance_t *in) { (void)in; }
 
 static int fails = 0;
 #define CHECK(c, m) do { if (!(c)) { printf("FAIL: %s\n", m); fails++; } \

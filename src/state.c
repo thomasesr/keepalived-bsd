@@ -16,6 +16,7 @@
 #include "state.h"
 #include "net.h"
 #include "vrrp.h"
+#include "sidefx.h"
 #include "logger.h"
 
 /* ── pure FSM helpers (RFC 5798 s6.1, s6.4) ─────────────────────────────── */
@@ -55,19 +56,8 @@ vrrp_action_t vrrp_recv_action(vrrp_state_t state, uint8_t my_prio,
     return VRRP_ACT_NONE;
 }
 
-/* ── side-effect stubs (Phase 5 fills these) ────────────────────────────── */
-
-static void sidefx_enter_master(const vrrp_instance_t *in)
-{
-    log_info("vrrp: [%s] vrid %u -> MASTER", in->name, in->vrid);
-    /* Phase 5: add VIPs (iface.c), enable DHCP (dhcp.c), gratuitous ARP (arp.c) */
-}
-
-static void sidefx_enter_backup(const vrrp_instance_t *in)
-{
-    log_info("vrrp: [%s] vrid %u -> BACKUP", in->name, in->vrid);
-    /* Phase 5: remove VIPs (iface.c), disable DHCP (dhcp.c) */
-}
+/* Transition side-effects (VIP/DHCP/gARP/alias) live in sidefx.c; the FSM stays
+ * portable and the unit tests link their own no-op stubs. */
 
 /* ── internals ──────────────────────────────────────────────────────────── */
 

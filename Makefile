@@ -13,11 +13,12 @@ TARGET  = keepalived-bsd
 
 SRCS    = src/main.c \
           src/config.c \
-          src/heartbeat.c \
           src/vrrp.c \
           src/net.c \
           src/state.c \
+          src/sidefx.c \
           src/iface.c \
+          src/arp.c \
           src/dhcp.c \
           src/alias.c \
           src/logger.c

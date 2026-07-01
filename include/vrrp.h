@@ -6,8 +6,8 @@
  *
  * This is the base layer of the daemon: it pulls in only system headers so
  * that config.h and state.h can include it without creating a circular
- * dependency. The custom "KALV" protocol (heartbeat.h) is being replaced by
- * real VRRPv3 unicast; see PLAN.md.
+ * dependency. This replaced the daemon's original custom "KALV" UDP protocol
+ * with real VRRPv3 unicast; see PLAN.md.
  */
 
 #include <net/if.h>

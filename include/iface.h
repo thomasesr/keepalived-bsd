@@ -1,9 +1,11 @@
 #ifndef IFACE_H
 #define IFACE_H
 
-#include "config.h"
+#include "vrrp.h"   /* vip_t */
 
-int iface_vip_add(const iface_cfg_t *iface);
-int iface_vip_del(const iface_cfg_t *iface);
+/* Add/remove a virtual IP on its host interface (vip->dev, resolved to the
+ * instance advert interface by config_load when omitted). FreeBSD ioctls. */
+int iface_vip_add(const vip_t *vip);
+int iface_vip_del(const vip_t *vip);
 
 #endif /* IFACE_H */

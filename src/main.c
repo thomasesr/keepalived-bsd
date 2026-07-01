@@ -91,11 +91,11 @@ int main(int argc, char *argv[])
     install_signal(SIGINT,  sig_handler);
     install_signal(SIGHUP,  SIG_IGN);
 
-    /* Open the heartbeat socket before daemonizing so a bind failure
-     * (port in use, not root) aborts with a non-zero exit the parent
+    /* Open the raw VRRP socket before daemonizing so a socket failure
+     * (not root, proto unavailable) aborts with a non-zero exit the parent
      * process / rc.d can see, instead of a silently broken daemon. */
     if (state_init(&state, &cfg) != 0) {
-        log_err("failed to initialize state (heartbeat socket)");
+        log_err("failed to initialize state (VRRP socket)");
         return 1;
     }
 

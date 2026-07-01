@@ -89,30 +89,30 @@ static int run_script(const char *script, const char *action, const char *iface)
     return 0;
 }
 
-int dhcp_enable_iface(const iface_cfg_t *iface, dhcp_backend_t backend)
+int dhcp_enable_iface(const char *iface, dhcp_backend_t backend)
 {
     if (backend == DHCP_BACKEND_NONE) {
-        log_info("dhcp: backend=none, skip enable on %s", iface->iface);
+        log_info("dhcp: backend=none, skip enable on %s", iface);
         return 0;
     }
-    if (!iface_safe(iface->iface)) {
-        log_err("dhcp: unsafe iface name '%s'", iface->iface);
+    if (!iface_safe(iface)) {
+        log_err("dhcp: unsafe iface name '%s'", iface);
         return -1;
     }
-    log_info("dhcp: enable %s on %s", dhcp_backend_name(backend), iface->iface);
-    return run_script(SCRIPT[backend], "enable", iface->iface);
+    log_info("dhcp: enable %s on %s", dhcp_backend_name(backend), iface);
+    return run_script(SCRIPT[backend], "enable", iface);
 }
 
-int dhcp_disable_iface(const iface_cfg_t *iface, dhcp_backend_t backend)
+int dhcp_disable_iface(const char *iface, dhcp_backend_t backend)
 {
     if (backend == DHCP_BACKEND_NONE) {
-        log_info("dhcp: backend=none, skip disable on %s", iface->iface);
+        log_info("dhcp: backend=none, skip disable on %s", iface);
         return 0;
     }
-    if (!iface_safe(iface->iface)) {
-        log_err("dhcp: unsafe iface name '%s'", iface->iface);
+    if (!iface_safe(iface)) {
+        log_err("dhcp: unsafe iface name '%s'", iface);
         return -1;
     }
-    log_info("dhcp: disable %s on %s", dhcp_backend_name(backend), iface->iface);
-    return run_script(SCRIPT[backend], "disable", iface->iface);
+    log_info("dhcp: disable %s on %s", dhcp_backend_name(backend), iface);
+    return run_script(SCRIPT[backend], "disable", iface);
 }
