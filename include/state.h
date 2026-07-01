@@ -28,6 +28,8 @@ typedef struct {
     struct in_addr src_ip;          /* bound source address */
     vrrp_rt_t      rt[MAX_INSTANCES];
     int            count;
+    uint64_t       next_status_ms;  /* status file heartbeat deadline (mono ms) */
+    int            status_dirty;    /* a transition needs an immediate write   */
 } state_ctx_t;
 
 /* Action decided by the receive path (RFC 5798 s6.4). */

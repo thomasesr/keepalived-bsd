@@ -17,6 +17,7 @@ SRCS    = src/main.c \
           src/net.c \
           src/state.c \
           src/sidefx.c \
+          src/status.c \
           src/iface.c \
           src/arp.c \
           src/dhcp.c \
@@ -45,7 +46,7 @@ check:
 	./tests/run_vrrp
 	$(CC) $(CFLAGS) -D_DEFAULT_SOURCE -Iinclude -o tests/run_config tests/test_config.c src/config.c src/logger.c
 	./tests/run_config
-	$(CC) $(CFLAGS) -D_DEFAULT_SOURCE -Iinclude -o tests/run_state tests/test_state.c src/state.c src/net.c src/vrrp.c src/logger.c
+	$(CC) $(CFLAGS) -D_DEFAULT_SOURCE -Iinclude -o tests/run_state tests/test_state.c src/state.c src/net.c src/vrrp.c src/status.c src/logger.c
 	./tests/run_state
 
 # ── daemon + config ───────────────────────────────────────────────────────────

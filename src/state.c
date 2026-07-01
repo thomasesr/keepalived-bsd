@@ -17,6 +17,7 @@
 #include "net.h"
 #include "vrrp.h"
 #include "sidefx.h"
+#include "status.h"
 #include "logger.h"
 
 /* ── pure FSM helpers (RFC 5798 s6.1, s6.4) ─────────────────────────────── */
@@ -98,16 +99,17 @@ static void enter_master(state_ctx_t *ctx, vrrp_rt_t *rt)
     send_advert(ctx, rt, rt->cfg->priority);
     rt->next_adv_ms = now_ms() + (uint64_t)rt->cfg->adver_cs * 10u;
     sidefx_enter_master(rt->cfg);
+    ctx->status_dirty = 1;
 }
 
 static void enter_backup(state_ctx_t *ctx, vrrp_rt_t *rt)
 {
-    (void)ctx;
     rt->state = VRRP_STATE_BACKUP;
     rt->last_transition = time(NULL);
     rt->master_down_ms = now_ms() +
         (uint64_t)vrrp_master_down_cs(rt->cfg->priority, rt->cfg->adver_cs) * 10u;
     sidefx_enter_backup(rt->cfg);
+    ctx->status_dirty = 1;
 }
 
 static void dispatch(state_ctx_t *ctx, const vrrp_advert_t *adv)
@@ -220,6 +222,15 @@ void state_run(state_ctx_t *ctx)
                     enter_master(ctx, rt);
             }
         }
+
+        /* Publish status immediately after any transition, else at most once a
+         * second so the `written` epoch stays fresh for the UI staleness flag. */
+        if (ctx->status_dirty || now >= ctx->next_status_ms) {
+            status_write(ctx);
+            ctx->status_dirty  = 0;
+            ctx->next_status_ms = now + 1000;
+        }
+
         usleep(50000); /* 50 ms poll */
     }
 
@@ -237,9 +248,10 @@ void state_shutdown(state_ctx_t *ctx)
             /* RFC 5798: a master shutting down sends a priority-0 advert so the
              * backup takes over immediately rather than waiting Master_Down. */
             send_advert(ctx, rt, VRRP_PRIO_STOP);
-            enter_backup(ctx, rt);   /* release VIPs / DHCP (Phase 5) */
+            enter_backup(ctx, rt);   /* release VIPs / DHCP */
         }
     }
+    status_write(ctx);   /* final snapshot: all instances resigned to BACKUP */
     if (ctx->sock >= 0) {
         close(ctx->sock);
         ctx->sock = -1;

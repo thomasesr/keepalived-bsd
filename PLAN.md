@@ -406,10 +406,15 @@ Each phase independently buildable + testable. One task at a time; each file wri
 - [ ] Verify no checksum/TTL rejects in peer keepalived logs
 
 ### Phase 7 — Status file (`status.c`)
-- [ ] `status_write()` — build per-instance JSON, temp + `fsync` + `rename()`
-- [ ] Include `written` epoch + all 8 columns' fields
-- [ ] Call on every transition + gated once/second in poll loop
-- [ ] Test: `cat /var/run/keepalived_bsd.status | python3 -m json.tool`
+- [x] `status_write()` — build per-instance JSON, temp + `fsync` + `rename()`; path
+      overridable via `$KEEPALIVED_STATUS_PATH` (unit harness); JSON string escaping
+- [x] Include `written` epoch + all 8 columns' fields (name, interface=adv_if, vrid,
+      priority, state, initial, probes_sent, probes_received, last_transition)
+- [x] Call on every transition (`status_dirty` flag) + gated once/second in poll loop;
+      final snapshot on shutdown after resign. New `state_ctx_t` fields
+      `next_status_ms`/`status_dirty`
+- [x] Test: harness fills a 2-instance ctx → `status_write` → `python3 -m json.tool`
+      validates (portable; `src/status.c` linked into `run_state` too)
 
 ### Phase 8 — OPNsense API plumbing
 - [ ] `actions_keepalived.conf`: add `[status_detail]` (`cat … || echo '{}'`)
