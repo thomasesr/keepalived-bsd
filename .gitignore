@@ -10,6 +10,7 @@ Dockerfile
 *.so.*
 keepalived-bsd
 tests/run_vrrp
+tests/run_config
 
 # Build directories
 build/

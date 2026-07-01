@@ -1,48 +1,76 @@
 # keepalived-bsd.conf.example
 #
 # Copy to /usr/local/etc/keepalived-bsd.conf and edit before starting.
+#
+# keepalived-bsd speaks real VRRPv3 (RFC 5798) unicast and interoperates with a
+# stock keepalived peer. One [vrrp_instance NAME] block per VRRP group (VRID).
+#
+# SECURITY: VRRPv3 has no in-packet authentication. Protect the advertisement
+# link (IP protocol 112) between this host and the peer with an OS transport
+# IPsec SA (ESP + PSK). See PLAN.md section 6. The "passcode" is the IPsec PSK;
+# it is configured in OPNsense IPsec, not here.
 
 [global]
 
-# IP address of the peer gateway
-peer        = 192.168.1.2
+# Fallback priority for instances that omit "priority". Higher wins MASTER.
+priority     = 100
 
-# UDP port for heartbeat packets (must match on both sides)
-port        = 5405
+# Fallback DHCP backend for instances that omit "dhcp_backend".
+# dnsmasq | kea | isc | none   (default: none = no DHCP management)
+dhcp_backend = dnsmasq
 
-# Election priority — higher value wins MASTER.
-# Set PRIMARY higher than BACKUP (e.g. 110 vs 100).
-priority    = 110
+# --- VRRP instances -----------------------------------------------------------
+# Each block mirrors a keepalived vrrp_instance. Interface names below are
+# FreeBSD names on THIS box (em0, igb0, vtnet0, VLAN igb0.10, ...) and will
+# differ from the peer's Linux names (br-lan, trunk, ...). Set them to match
+# your OPNsense interfaces.
+#
+#   state              initial state (BACKUP or MASTER); default BACKUP
+#   interface          advert interface (where VRRP packets are sent/received)
+#   unicast_src_ip     this host's source IP for adverts
+#   unicast_peer       the peer's IP
+#   virtual_router_id  VRID; MUST match the peer's VRID for this group
+#   priority           1..254 (255 = address owner); omit to use [global]
+#   advert_int         advertisement interval, seconds (must match the peer)
+#   vip                virtual IP; repeatable. "vip = ADDR/pfx [dev IF] [label L]"
+#                      dev defaults to the advert interface.
+#   dhcp_backend       optional per-instance override
+#   alias              optional OPNsense firewall alias to update with the VIP
 
-# Seconds between heartbeat sends (when MASTER)
-heartbeat   = 1
+[vrrp_instance master]
+  state             = BACKUP
+  interface         = igb0
+  unicast_src_ip    = 192.168.1.1
+  unicast_peer      = 192.168.1.3
+  virtual_router_id = 10
+  priority          = 110
+  advert_int        = 5
+  vip               = 192.165.1.2/24 dev igb0
+  # alias           = keepalived_vip_lan
 
-# Seconds of silence from peer before promoting to MASTER
-timeout     = 3
+[vrrp_instance VI_666]
+  interface         = igb0
+  unicast_src_ip    = 192.168.1.1
+  unicast_peer      = 192.168.1.3
+  virtual_router_id = 66
+  priority          = 110
+  advert_int        = 5
+  vip               = 10.6.6.2/24 dev igb0.666
 
-# If 'yes': yield MASTER to a peer with higher priority when it comes back.
-# If 'no':  hold MASTER until local process restarts.
-preempt     = yes
+[vrrp_instance VI_IOT]
+  interface         = igb0
+  unicast_src_ip    = 192.168.1.1
+  unicast_peer      = 192.168.1.3
+  virtual_router_id = 13
+  priority          = 110
+  advert_int        = 5
+  vip               = 192.166.1.2/24 dev igb0.13
 
-# --- Interface sections ---
-# One [iface <name>] block per interface that needs a VIP + DHCP toggle.
-# <name> must be the exact FreeBSD interface name (em0, igb0, vtnet0, etc.)
-
-[iface em0]
-# Virtual IP to assign when MASTER, remove when BACKUP
-vip          = 10.0.0.1/24
-
-# OPNsense firewall alias to update with the VIP on MASTER (optional).
-# The alias is created automatically if it does not exist.
-# Use this alias in firewall rules that should match the VIP address.
-# alias      = keepalived_vip_em0
-
-# DHCP backend for this interface. Defaults to 'none' (no DHCP management) if
-# omitted. On OPNsense 26.1 the out-of-the-box backend is dnsmasq; ISC (dhcpd)
-# was moved out of core and needs the os-isc-dhcp plugin.
-# dhcp_backend = dnsmasq   # dnsmasq | kea | isc | none
-
-# [iface em1]
-# vip          = 192.168.100.1/24
-# alias        = keepalived_vip_em1
-# dhcp_backend = dnsmasq   # dnsmasq | kea | isc | none
+[vrrp_instance VI_WAN]
+  interface         = igb0
+  unicast_src_ip    = 192.168.1.1
+  unicast_peer      = 192.168.1.3
+  virtual_router_id = 20
+  priority          = 110
+  advert_int        = 5
+  vip               = 192.167.1.2/24 dev igb0.20

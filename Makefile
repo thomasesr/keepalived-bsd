@@ -35,13 +35,15 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -Iinclude -c -o $@ $<
 
 clean:
-	rm -f $(OBJS) $(TARGET) tests/run_vrrp
+	rm -f $(OBJS) $(TARGET) tests/run_vrrp tests/run_config
 
 # ── unit tests (portable; no FreeBSD-specific code) ─────────────────────────────
 
 check:
 	$(CC) $(CFLAGS) -D_DEFAULT_SOURCE -Iinclude -o tests/run_vrrp tests/test_vrrp.c src/vrrp.c
 	./tests/run_vrrp
+	$(CC) $(CFLAGS) -D_DEFAULT_SOURCE -Iinclude -o tests/run_config tests/test_config.c src/config.c src/logger.c
+	./tests/run_config
 
 # ── daemon + config ───────────────────────────────────────────────────────────
 

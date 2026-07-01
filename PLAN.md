@@ -353,11 +353,18 @@ Each phase independently buildable + testable. One task at a time; each file wri
       — deferred to the box build/test pass (per chosen workflow)
 
 ### Phase 3 — Config parser (`config.c` rewrite)
-- [ ] Parse `[vrrp_instance NAME]` sections + all keys; repeatable `vip … dev …`
-- [ ] Resolve per-instance priority (fallback to `[global] priority`)
-- [ ] Validate (unique vrid, ranges, required src/peer); reject old `[iface]` w/ migration error
-- [ ] Ship `keepalived-bsd.conf.example` with all 4 peer instances (placeholder ifaces)
-- [ ] Test: load example, dump parsed instances
+- [x] Parse `[vrrp_instance NAME]` sections + all keys; repeatable `vip … dev … label …`
+- [x] Resolve per-instance priority (fallback `[global] priority` → `DEFAULT_PRIORITY`),
+      dhcp_backend INHERIT → global, vip dev → adv_if, advert_int → centiseconds
+- [x] Validate (vrid set, adv_if/src/peer required, duplicate-vrid warning); reject old
+      `[iface]` with a migration error
+- [x] `config_t` now instance-based; `iface_cfg_t` kept as a legacy type only (dhcp.h/
+      iface.c), removed in Phase 5. Added per-instance `alias` (OPNsense fw alias) to
+      preserve that feature for Phase 5 rewiring.
+- [x] Rewrote `keepalived-bsd.conf.example` with all 4 peer instances (VRID 10/66/13/20,
+      placeholder FreeBSD ifaces) + IPsec/security note
+- [x] Unit test `tests/test_config.c` + `make check`: 24 checks (parse, global fallback,
+      vip dev/label, legacy-reject, missing-vrid-reject). All pass.
 
 ### Phase 4 — Per-VRID FSM (`state.c` rewrite)
 - [ ] Per-instance timers: `Skew_Time`, `Master_Down_Interval` (centiseconds)
