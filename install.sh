@@ -21,45 +21,31 @@ fi
 
 # ── config migration ──────────────────────────────────────────────────────────
 # Called after the active .conf is confirmed to exist.
-# Adds missing keys with safe defaults; removes deprecated keys. Never overwrites existing values.
+# The VRRPv3 rewrite is a HARD BREAK from the old KALV [global]+[iface] format:
+# the daemon rejects legacy configs and there is no auto-migration (the whole-node
+# model became per-VRID [vrrp_instance] blocks — no safe mechanical rewrite).
+# We never mutate the operator's .conf; we detect the old shape and tell them to
+# port it. A current VRRPv3 config needs no changes ([global] keys are optional).
 config_upgrade() {
     local conf="$1"
-    local changed=0
 
-    # Helper: append a key=value line under [global] if key is absent
-    add_global_key() {
-        local key="$1" val="$2" comment="$3"
-        if ! grep -qE "^[[:space:]]*${key}[[:space:]]*=" "${conf}"; then
-            printf '\n# Added by install.sh upgrade\n# %s\n%s = %s\n' \
-                "${comment}" "${key}" "${val}" >> "${conf}"
-            echo "    + added: ${key} = ${val}"
-            changed=1
-        fi
-    }
-
-    # Helper: remove a key=value line from config (FreeBSD sed requires -i '')
-    remove_global_key() {
-        local key="$1"
-        if grep -qE "^[[:space:]]*${key}[[:space:]]*=" "${conf}"; then
-            sed -i '' "/^[[:space:]]*${key}[[:space:]]*=/d" "${conf}"
-            echo "    - removed: ${key} (now per-interface only)"
-            changed=1
-        fi
-    }
-
-    # v0.1.0+: required global keys
-    add_global_key heartbeat    1    "Seconds between heartbeat sends"
-    add_global_key timeout      3    "Seconds of peer silence before MASTER promotion"
-    add_global_key preempt      yes  "Yield MASTER to higher-priority peer: yes | no"
-
-    # v0.1.7+: global dhcp_backend removed — configure per [iface] block instead
-    remove_global_key dhcp_backend
-
-    if [ "${changed}" -eq 1 ]; then
-        echo "    Config updated — review ${conf} before restarting."
-    else
-        echo "    Config is current — no migration needed."
+    if grep -qE '^[[:space:]]*\[iface[[:space:]]+[^]]+\]' "${conf}"; then
+        echo "    WARNING: legacy [iface ...] config detected — INCOMPATIBLE with VRRPv3." >&2
+        echo "             The daemon will refuse to start until this file is rewritten as" >&2
+        echo "             [vrrp_instance NAME] blocks. There is no automatic migration." >&2
+        echo "             Template: ${CONF}/keepalived-bsd.conf.example" >&2
+        return 0
     fi
+
+    # Old KALV global keys but no instances = stale / half-ported file.
+    if ! grep -qE '^[[:space:]]*\[vrrp_instance[[:space:]]+[^]]+\]' "${conf}" \
+       && grep -qE '^[[:space:]]*(heartbeat|timeout|peer|port)[[:space:]]*=' "${conf}"; then
+        echo "    WARNING: old KALV-style keys but no [vrrp_instance] blocks — rewrite required." >&2
+        echo "             Template: ${CONF}/keepalived-bsd.conf.example" >&2
+        return 0
+    fi
+
+    echo "    Config format is current (VRRPv3) — no migration needed."
 }
 
 # ── paths / state ───────────────────────────────────────────────────────────
@@ -132,13 +118,25 @@ stop_running_daemon() {
 validate_conf() {
     local conf="$1"
     [ -f "${conf}" ] || return 0
-    local missing="" _k _v
-    for _k in peer port priority heartbeat timeout preempt; do
-        grep -qE "^[[:space:]]*${_k}[[:space:]]*=" "${conf}" || missing="${missing} ${_k}"
+    local _k _v
+
+    # Legacy KALV format — the VRRPv3 daemon rejects [iface] and will not start.
+    if grep -qE "^[[:space:]]*\[iface[[:space:]]+[^]]+\]" "${conf}"; then
+        echo "    WARNING: legacy [iface ...] block present — VRRPv3 daemon will reject this config" >&2
+    fi
+
+    # At least one instance, or the daemon has nothing to run.
+    if ! grep -qE "^[[:space:]]*\[vrrp_instance[[:space:]]+[^]]+\]" "${conf}"; then
+        echo "    WARNING: no [vrrp_instance NAME] block — daemon would manage nothing" >&2
+    fi
+
+    # Coarse required-key presence (daemon requires each per [vrrp_instance]).
+    # File-wide check only — the daemon does the authoritative per-section validation.
+    for _k in interface unicast_src_ip unicast_peer virtual_router_id; do
+        grep -qE "^[[:space:]]*${_k}[[:space:]]*=" "${conf}" \
+            || echo "    WARNING: no '${_k} =' found — required in each [vrrp_instance]" >&2
     done
-    [ -n "${missing}" ] && echo "    WARNING: [global] missing keys:${missing}" >&2
-    grep -qE "^[[:space:]]*\[iface[[:space:]]+[^]]+\]" "${conf}" \
-        || echo "    WARNING: no [iface ...] block — daemon would manage nothing" >&2
+
     grep -hoE "^[[:space:]]*dhcp_backend[[:space:]]*=[[:space:]]*[A-Za-z]+" "${conf}" 2>/dev/null \
       | sed -E 's/.*=[[:space:]]*//' \
       | while IFS= read -r _v; do
