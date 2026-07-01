@@ -48,6 +48,7 @@ service keepalived_bsd start
 
 ## Changes
 
+- `3e20e2c` docs(ipsec): transport-mode IPsec templates (`swanctl-opnsense.conf` / `swanctl-openwrt.conf`, ESP/PSK, proto-112 selector, policy `require`) + on-box setup/failover runbook for securing the VRRPv3 link
 - `79cabcd` feat(opnsense): replace the global+iface plugin model/UI with a per-instance VRRPv3 model — `vrrp_instance` grid + add/edit modal, add/del instance API, config generator, and a live VRRP status table
 - `5a51de5` feat(opnsense): `status_detail` configd action + API surfacing the daemon's per-instance JSON status
 - `cb821ef` feat(vrrp): atomic per-instance JSON status file (`/var/run/keepalived_bsd.status`)
