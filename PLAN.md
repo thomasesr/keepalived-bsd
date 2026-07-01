@@ -441,11 +441,15 @@ Each phase independently buildable + testable. One task at a time; each file wri
       populates/refreshes — deferred to the box test pass
 
 ### Phase 10 — Docs & release
-- [ ] Update `CLAUDE.md` (protocol, config model, file layout)
-- [ ] Update `README`/config docs; migration note (old config breaks)
-- [ ] Document transport-IPsec setup (§6): OPNsense + peer strongSwan, PSK, proto-112 SA
-- [ ] `RELEASE.md`: changelog entries for the range
-- [ ] Verify `make install-all` clean on OPNsense 26.1
+- [x] Update `CLAUDE.md` (VRRPv3 protocol, `[vrrp_instance]` config model, new src/ file
+      layout incl. vrrp/net/arp/sidefx/status/alias, per-VRID state table, plugin wiring)
+- [x] Update `README`/config docs; migration note (old KALV `[iface]` config breaks →
+      rewrite as `[vrrp_instance]`; new config key table + example)
+- [x] Document transport-IPsec setup: README "Security" section (transport mode, proto 112,
+      policy `require`) referencing PLAN §6 swanctl example
+- [x] `RELEASE.md`: rewrote intro (VRRPv3 + breaking-change note) and `## Changes` for the
+      v0.1.21..HEAD range (8 feat commits)
+- [ ] Verify `make install-all` clean on OPNsense 26.1 — on-box, deferred to the box test pass
 
 ## Open items to verify during build (not from memory)
 - [ ] VRRPv3 checksum exact algorithm — confirm vs RFC 5798 §5.1.1.4 + real capture

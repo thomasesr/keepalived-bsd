@@ -1,8 +1,15 @@
 # keepalived-bsd {{RELEASE_TAG}}
 
-VRRP-like high-availability daemon for OPNsense. Coordinates MASTER/BACKUP
-state between gateways via UDP heartbeats, manages virtual IPs and DHCP
-per interface on state transition.
+Real **VRRPv3 (RFC 5798)** high-availability daemon for OPNsense. Runs N
+independent per-VRID instances that elect MASTER/BACKUP via unicast VRRPv3
+advertisements (IP protocol 112) and manage virtual IPs, gratuitous ARP and
+DHCP on transition. Interoperates natively with a stock keepalived peer.
+
+> **Breaking change:** this release replaces the old custom `KALV` UDP protocol
+> and `[global]`+`[iface]` config with real VRRPv3 and `[vrrp_instance NAME]`
+> config. Old configs are rejected with a migration error — see README
+> "Migrating". VRRPv3 has no in-packet auth; protect the proto-112 link with
+> transport-mode IPsec (ESP/PSK). There is no automatic migration.
 
 ## Target platform
 
@@ -41,9 +48,14 @@ service keepalived_bsd start
 
 ## Changes
 
-- `9ac7afe` fix(install): installer now stops a running daemon before reinstalling (clean SIGTERM so VIPs/DHCP are released), validates shipped plugin and config files, registers the plugin with pkg as `os-keepalived` so it shows on System > Firmware > Plugins, and clears the correct MVC cache so the Services > Keepalived menu refreshes
-- `493ff34` fix(webui): validate timeout/heartbeat and surface clear errors instead of silently accepting bad values
-- `81ec976` fix(configd): status action no longer errors when the daemon is stopped
+- `79cabcd` feat(opnsense): replace the global+iface plugin model/UI with a per-instance VRRPv3 model — `vrrp_instance` grid + add/edit modal, add/del instance API, config generator, and a live VRRP status table
+- `5a51de5` feat(opnsense): `status_detail` configd action + API surfacing the daemon's per-instance JSON status
+- `cb821ef` feat(vrrp): atomic per-instance JSON status file (`/var/run/keepalived_bsd.status`)
+- `0adf549` feat(vrrp): transition side-effects — VIP add/del, DHCP toggle, gratuitous ARP, firewall-alias update, per instance
+- `74b6139` feat(vrrp): per-VRID FSM with RFC 5798 timers (Skew_Time / Master_Down_Interval), preempt and priority-0 resign
+- `e4140ee` feat(config): `[vrrp_instance NAME]` INI parser (repeatable `vip`, per-instance priority/DHCP, legacy `[iface]` rejected)
+- `d373f25` feat(vrrp): raw IP proto-112 unicast transport, TTL=255 on send, drop-on-recv for TTL != 255
+- `4ac31c2` feat(vrrp): VRRPv3 advert codec + IPv4 pseudo-header checksum (RFC 5798 §5.1)
 
 ## Checksums
 
