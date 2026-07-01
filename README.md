@@ -113,7 +113,8 @@ VRRPv3 carries **no in-packet authentication** (RFC 5798 §9). Protect the adver
 
 - Transport mode (host-to-host), **not** tunnel — preserves the original IP header so TTL=255 survives.
 - Selector: local ↔ remote, protocol `112`. Use IPsec policy **`require`** (not `use`) so unprotected VRRP is dropped (no auth bypass).
-- On OPNSense: strongSwan (`swanctl.conf`); on OpenWRT: matching strongSwan/racoon transport SA, same PSK, mirrored selectors. See `PLAN.md` §6 for an example.
+- On OPNSense: strongSwan (`swanctl.conf`); on OpenWRT: matching strongSwan/racoon transport SA, same PSK, mirrored selectors.
+- Ready-to-use templates + on-box setup/failover runbook: **`ipsec/`** (`swanctl-opnsense.conf`, `swanctl-openwrt.conf`, `ipsec/README.md`). See also `PLAN.md` §6.
 
 ## OPNSense UI
 

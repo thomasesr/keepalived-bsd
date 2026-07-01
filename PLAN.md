@@ -396,6 +396,10 @@ Each phase independently buildable + testable. One task at a time; each file wri
       the box build/test pass (needs FreeBSD ioctls + `/dev/bpf`)
 
 ### Phase 6 — Transport IPsec + integration vs real peer (`192.168.1.3`)
+- [x] **Config + docs prepared** (`ipsec/`): `swanctl-opnsense.conf` + `swanctl-openwrt.conf`
+      (transport mode, proto-112 selector, ESP aes256gcm16, IKEv2, PSK, DPD, policy
+      `require`) + `ipsec/README.md` runbook mapping all 8 items below to on-box commands.
+      Execution boxes stay open — they need the FreeBSD box + live peer.
 - [ ] Bring up strongSwan transport SA `192.168.1.1↔192.168.1.3`, proto 112, PSK (§6)
 - [ ] Set IPsec policy to `require`; confirm unprotected VRRP is dropped
 - [ ] Verify outbound raw `IP_HDRINCL` VRRP is IPsec-protected on the wire (tcpdump: ESP)

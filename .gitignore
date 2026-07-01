@@ -47,3 +47,5 @@ core.*
 *.conf
 !*.conf.example
 !opnsense/service/conf/actions.d/actions_keepalived.conf
+# IPsec templates (placeholder PSK, copied on-box)
+!ipsec/*.conf
