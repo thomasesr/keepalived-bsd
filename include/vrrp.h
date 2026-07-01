@@ -92,6 +92,10 @@ uint16_t vrrp_checksum(const void *msg, size_t msg_len,
                        struct in_addr src, struct in_addr dst);
 int vrrp_advert_encode(uint8_t *buf, size_t buflen, const vrrp_advert_t *adv,
                        struct in_addr src, struct in_addr dst);
-int vrrp_advert_decode(const uint8_t *buf, size_t len, vrrp_advert_t *out);
+/* src/dst come from the received IP header and are needed to verify the
+ * pseudo-header checksum; out->src is set to src on success. */
+int vrrp_advert_decode(const uint8_t *buf, size_t len,
+                       struct in_addr src, struct in_addr dst,
+                       vrrp_advert_t *out);
 
 #endif /* VRRP_H */

@@ -330,11 +330,14 @@ Each phase independently buildable + testable. One task at a time; each file wri
 - [x] `vrrp.h` syntax-checked on Linux with project CFLAGS (`-D_BSD_SOURCE`)
 
 ### Phase 1 — VRRPv3 wire codec (`vrrp.c`) — pure, unit-testable
-- [ ] `vrrp_advert_build()` — pack ver/type/vrid/priority/count/adver_int/VIP list
-- [ ] `vrrp_checksum()` — internet checksum over IPv4 pseudo-header + message
-- [ ] `vrrp_advert_parse()` — validate ver=3/type=1, checksum, length; extract fields
-- [ ] Standalone test harness: build a packet, verify checksum against a **tcpdump
-      capture from the real peer** (record the capture first)
+- [x] `vrrp_advert_encode()` — pack ver/type/vrid/priority/count/max_adver/VIP list
+- [x] `vrrp_checksum()` — internet checksum over IPv4 pseudo-header + message
+- [x] `vrrp_advert_decode()` — validate ver=3/type=1, checksum, length; extract fields
+- [x] Test harness `tests/test_vrrp.c` + `make check` — 16 checks: round-trip, checksum
+      self-verify, all reject paths. Wired `src/vrrp.c` into Makefile.
+- [ ] **Verify checksum against a tcpdump capture from the real peer** — deferred to
+      Phase 6 (needs the live peer; self-consistency proven, pseudo-header algorithm per
+      RFC 5798 §5.1.1.4 still to be confirmed on the wire)
 
 ### Phase 2 — Raw socket transport (`net.c`) [FreeBSD]
 - [ ] `net_open()` — `SOCK_RAW` proto 112, `IP_HDRINCL`, bind src, TTL=255

@@ -14,6 +14,7 @@ TARGET  = keepalived-bsd
 SRCS    = src/main.c \
           src/config.c \
           src/heartbeat.c \
+          src/vrrp.c \
           src/state.c \
           src/iface.c \
           src/dhcp.c \
@@ -22,7 +23,7 @@ SRCS    = src/main.c \
 
 OBJS    = $(SRCS:.c=.o)
 
-.PHONY: all clean install install-rc install-opnsense install-all uninstall uninstall-opnsense
+.PHONY: all clean check install install-rc install-opnsense install-all uninstall uninstall-opnsense
 
 all: $(TARGET)
 
@@ -33,7 +34,13 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -Iinclude -c -o $@ $<
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET) tests/run_vrrp
+
+# ── unit tests (portable; no FreeBSD-specific code) ─────────────────────────────
+
+check:
+	$(CC) $(CFLAGS) -D_DEFAULT_SOURCE -Iinclude -o tests/run_vrrp tests/test_vrrp.c src/vrrp.c
+	./tests/run_vrrp
 
 # ── daemon + config ───────────────────────────────────────────────────────────
 
