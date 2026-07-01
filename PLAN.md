@@ -417,9 +417,12 @@ Each phase independently buildable + testable. One task at a time; each file wri
       validates (portable; `src/status.c` linked into `run_state` too)
 
 ### Phase 8 — OPNsense API plumbing
-- [ ] `actions_keepalived.conf`: add `[status_detail]` (`cat … || echo '{}'`)
-- [ ] `ServiceController::statusDetailAction()` → JSON array
-- [ ] `service configd restart`; test `GET /api/keepalived/service/statusDetail`
+- [x] `actions_keepalived.conf`: add `[status_detail]` (`cat /var/run/keepalived_bsd.status
+      2>/dev/null || echo '{}'`, type `script_output`)
+- [x] `ServiceController::statusDetailAction()` → decodes the JSON to a PHP array;
+      absent/invalid file falls back to `{written:0, instances:[]}` so the UI flags stale
+- [ ] **On-box:** `service configd restart`; test `GET /api/keepalived/service/statusDetail`
+      — deferred to the box test pass
 
 ### Phase 9 — OPNsense model + UI
 - [ ] `Keepalived.xml`: `vrrp_instance` grid model (replaces global+iface fields)

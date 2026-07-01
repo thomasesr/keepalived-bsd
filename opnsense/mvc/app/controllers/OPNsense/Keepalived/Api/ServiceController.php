@@ -43,6 +43,21 @@ class ServiceController extends ApiControllerBase
         ];
     }
 
+    /* GET /api/keepalived/service/statusDetail
+     * Returns the daemon's atomic JSON status file (per-VRRP-instance state),
+     * decoded to an array. Empty/absent file yields an empty instance list so
+     * the UI can flag the data stale rather than error. */
+    public function statusDetailAction()
+    {
+        $backend = new Backend();
+        $raw     = trim($backend->configdRun('keepalived status_detail'));
+        $data    = json_decode($raw, true);
+        if (!is_array($data)) {
+            $data = ['written' => 0, 'instances' => []];
+        }
+        return $data;
+    }
+
     /* POST /api/keepalived/service/apply
      * Generates /usr/local/etc/keepalived-bsd.conf from the stored model
      * and restarts the daemon if enabled. */
