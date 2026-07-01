@@ -25,7 +25,7 @@ DHCP on transition. Interoperates natively with a stock keepalived peer.
 - `keepalived-bsd` — daemon binary (FreeBSD amd64 ELF)
 - `keepalived-bsd.conf.example` — annotated config template
 - `keepalived_bsd` — FreeBSD rc.d startup script
-- `scripts.tar.gz` — DHCP backend helper scripts (ISC / Kea / dnsmasq)
+- `scripts.tar.gz` — helper scripts: DHCP backends (dnsmasq / Kea / ISC) + firewall-alias update
 - `opnsense-plugin.tar.gz` — OPNsense MVC plugin (models, controllers, views, configd actions)
 
 ## Install
