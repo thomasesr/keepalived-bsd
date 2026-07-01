@@ -23,6 +23,18 @@ keepalived_bsd_prestart()
     if [ ! -f "$required_files" ]; then
         err 1 "config not found: $required_files"
     fi
+
+    # VRRP and kernel CARP share IP proto 112. carp.ko owns the proto-112 input
+    # handler and swallows every inbound advert before it reaches our raw socket
+    # (no per-interface knob; net.inet.carp.allow=0 still drops). Unload it so
+    # adverts reach userspace. Incompatible with OPNsense CARP VIPs by design.
+    if kldstat -n carp.ko >/dev/null 2>&1; then
+        if kldunload carp >/dev/null 2>&1; then
+            warn "keepalived_bsd: unloaded carp.ko so VRRP (IP proto 112) can receive"
+        else
+            warn "keepalived_bsd: carp.ko is loaded and in use; remove CARP VIPs — VRRP RX will fail until then"
+        fi
+    fi
 }
 
 keepalived_bsd_poststop()

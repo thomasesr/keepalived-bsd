@@ -9,7 +9,10 @@
  * kea's helper is whole-service and no-ops the duplicate).
  */
 
+#include <errno.h>
 #include <string.h>
+#include <sys/param.h>
+#include <sys/linker.h>
 
 #include "sidefx.h"
 #include "iface.h"
@@ -17,6 +20,27 @@
 #include "arp.h"
 #include "alias.h"
 #include "logger.h"
+
+void sidefx_carp_guard(void)
+{
+    static int warned_inuse = 0;   /* throttle the "in use" warning to once */
+    int fileid;
+
+    fileid = kldfind("carp.ko");
+    if (fileid < 0) {              /* not loaded — nothing to do */
+        warned_inuse = 0;
+        return;
+    }
+    if (kldunload(fileid) == 0) {
+        log_warn("carp.ko unloaded: CARP and VRRP share IP proto 112, so the "
+                 "kernel CARP handler would swallow all inbound adverts");
+        warned_inuse = 0;
+    } else if (!warned_inuse) {
+        log_warn("carp.ko is loaded and in use (%s); remove CARP virtual IPs — "
+                 "VRRP receive is blocked until then", strerror(errno));
+        warned_inuse = 1;
+    }
+}
 
 /* Enable or disable DHCP on each unique interface hosting one of the VIPs. */
 static void dhcp_toggle_all(const vrrp_instance_t *in, int enable)

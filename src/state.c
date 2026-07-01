@@ -195,12 +195,21 @@ void state_run(state_ctx_t *ctx)
 {
     uint8_t buf[256];
     struct in_addr src;
-    uint64_t now;
+    uint64_t now, next_carp_ms = 0;
     int ttl, r, i;
 
     log_info("state: event loop start, %d instance(s)", ctx->count);
 
     while (g_running) {
+        /* Keep kernel CARP off IP proto 112 (see sidefx_carp_guard). Runs on
+         * the first iteration regardless of launch method and re-checks in case
+         * carp.ko is reloaded mid-run. */
+        now = now_ms();
+        if (now >= next_carp_ms) {
+            sidefx_carp_guard();
+            next_carp_ms = now + 10000;   /* re-check every 10 s */
+        }
+
         /* drain the shared socket; dispatch each advert to its VRID */
         while ((r = net_vrrp_recv(ctx->sock, buf, sizeof(buf), &src, &ttl)) != -1) {
             vrrp_advert_t adv;

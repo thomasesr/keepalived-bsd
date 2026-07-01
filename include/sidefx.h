@@ -13,4 +13,12 @@
 void sidefx_enter_master(const vrrp_instance_t *in);
 void sidefx_enter_backup(const vrrp_instance_t *in);
 
+/*
+ * Unload the kernel CARP module if present. CARP and VRRP share IP proto 112;
+ * carp.ko owns the proto-112 input handler and swallows every inbound advert
+ * before it reaches our raw socket. Called at daemon start and periodically so
+ * a mid-run carp.ko reload can't silently starve receive. No-op if not loaded.
+ */
+void sidefx_carp_guard(void);
+
 #endif /* SIDEFX_H */

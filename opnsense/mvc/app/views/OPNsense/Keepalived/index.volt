@@ -380,6 +380,12 @@ $(function () {
             <label class="col-sm-3 control-label">{{ lang._('Enable') }}</label>
             <div class="col-sm-6"><input type="checkbox" id="enabled"></div>
         </div>
+        <div class="form-group"><div class="col-sm-offset-3 col-sm-9">
+            <div class="alert alert-warning" style="margin-bottom:0">
+                <i class="fa fa-exclamation-triangle"></i>
+                {{ lang._('Enabling this service unloads the kernel CARP module (carp.ko) each time the daemon starts. VRRP and CARP both use IP protocol 112, and the kernel CARP handler would otherwise swallow every inbound VRRP advert before it reaches this daemon. This is incompatible with OPNsense CARP virtual IPs — do not run CARP-based HA on this host.') }}
+            </div>
+        </div></div>
         <div class="form-group">
             <label class="col-sm-3 control-label">{{ lang._('Default Priority') }}</label>
             <div class="col-sm-2"><input type="number" id="gpriority" class="form-control" min="1" max="254"></div>

@@ -12,6 +12,7 @@ volatile sig_atomic_t g_running = 1;
  * FSM unit test so it links without the transition side-effect code. */
 void sidefx_enter_master(const vrrp_instance_t *in) { (void)in; }
 void sidefx_enter_backup(const vrrp_instance_t *in) { (void)in; }
+void sidefx_carp_guard(void) { }
 
 static int fails = 0;
 #define CHECK(c, m) do { if (!(c)) { printf("FAIL: %s\n", m); fails++; } \
