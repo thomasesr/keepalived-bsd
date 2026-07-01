@@ -118,6 +118,8 @@ $(function () {
             var iface = selectedVal(row.interface) || selectedKey(row.interface) || '—';
             var btnEdit = $('<button class="btn btn-xs btn-default">').html('<i class="fa fa-pencil"></i> {{ lang._('Edit') }}')
                 .click((function (u, r) { return function () { openModal(u, r); }; })(uuid, row));
+            var btnClone = $('<button class="btn btn-xs btn-default" style="margin-left:4px">').html('<i class="fa fa-clone"></i> {{ lang._('Clone') }}')
+                .click((function (r) { return function () { openModal(null, r, true); }; })(row));
             var btnDel  = $('<button class="btn btn-xs btn-danger" style="margin-left:4px">').html('<i class="fa fa-trash"></i> {{ lang._('Remove') }}')
                 .click((function (u) { return function () { delInstance(u); }; })(uuid));
             tbody.append($('<tr>').append(
@@ -129,7 +131,7 @@ $(function () {
                 $('<td>').text(row.advert_int + 's'),
                 $('<td style="white-space:pre-line">').text(vipLines(row.vip).join('\n') || '—'),
                 $('<td>').text(selectedVal(row.dhcp_backend) || '{{ lang._('none') }}'),
-                $('<td style="white-space:nowrap">').append(btnEdit, btnDel)
+                $('<td style="white-space:nowrap">').append(btnEdit, btnClone, btnDel)
             ));
         });
         if (n === 0) {
@@ -140,22 +142,28 @@ $(function () {
 
     /*-- instance add/edit modal --*/
     var editUuid = null;
-    function openModal(uuid, row) {
+    /* uuid set => edit (delete-then-add on save). isClone => add mode but
+       pre-populate from row so a copy can be tweaked before saving. Model has a
+       UniqueConstraint on name + virtual_router_id, so the name is suffixed
+       "-copy" to avoid an instant duplicate; user still edits the VRID. */
+    function openModal(uuid, row, isClone) {
         editUuid = uuid || null;
+        var populate = !!uuid || !!isClone;
         row = row || {};
-        $('#modal-title').text(uuid ? '{{ lang._('Edit VRRP Instance') }}' : '{{ lang._('Add VRRP Instance') }}');
-        $('#modal-name').val(uuid ? row.name : '');
-        $('#modal-state').val(uuid ? (selectedKey(row.state) || 'BACKUP') : 'BACKUP');
-        $('#modal-interface').val(uuid ? selectedKey(row.interface) : '');
-        $('#modal-src').val(uuid ? row.unicast_src_ip : '');
-        $('#modal-peer').val(uuid ? row.unicast_peer : '');
-        $('#modal-vrid').val(uuid ? row.virtual_router_id : '');
-        $('#modal-priority').val(uuid ? row.priority : '100');
-        $('#modal-advint').val(uuid ? row.advert_int : '5');
-        $('#modal-preempt').prop('checked', uuid ? (row.preempt == '1' || selectedKey(row.preempt) == '1') : true);
-        $('#modal-vip').val(uuid ? vipLines(row.vip).join('\n') : '');
-        $('#modal-alias').val(uuid ? (row.alias || '') : '');
-        $('#modal-dhcp').val(uuid ? (selectedKey(row.dhcp_backend) || 'none') : 'none');
+        $('#modal-title').text(uuid ? '{{ lang._('Edit VRRP Instance') }}'
+            : (isClone ? '{{ lang._('Clone VRRP Instance') }}' : '{{ lang._('Add VRRP Instance') }}'));
+        $('#modal-name').val(populate ? ((row.name || '') + (isClone ? '-copy' : '')) : '');
+        $('#modal-state').val(populate ? (selectedKey(row.state) || 'BACKUP') : 'BACKUP');
+        $('#modal-interface').val(populate ? selectedKey(row.interface) : '');
+        $('#modal-src').val(populate ? row.unicast_src_ip : '');
+        $('#modal-peer').val(populate ? row.unicast_peer : '');
+        $('#modal-vrid').val(populate ? row.virtual_router_id : '');
+        $('#modal-priority').val(populate ? row.priority : '100');
+        $('#modal-advint').val(populate ? row.advert_int : '5');
+        $('#modal-preempt').prop('checked', populate ? (row.preempt == '1' || selectedKey(row.preempt) == '1') : true);
+        $('#modal-vip').val(populate ? vipLines(row.vip).join('\n') : '');
+        $('#modal-alias').val(populate ? (row.alias || '') : '');
+        $('#modal-dhcp').val(populate ? (selectedKey(row.dhcp_backend) || 'none') : 'none');
         $('#modal-error').hide().text('');
         $('#inst-modal').modal('show');
     }
