@@ -142,9 +142,9 @@ VRRPv3 IPv4 advert (RFC 5798 §5.1), on IP proto 112, TTL **must be 255**:
   vector against the real peer.**
 - **Timers (§5.2):** `Skew_Time = ((256 - priority) * Master_Adver_Interval)/256`;
   `Master_Down_Interval = 3*Master_Adver_Interval + Skew_Time`. Interval in centiseconds.
-- **Send:** raw `socket(AF_INET, SOCK_RAW, 112)`, `IP_HDRINCL` to control TTL=255 +
-  src; `sendto` peer_ip (unicast). *(FreeBSD `ip_len`/`ip_off` byte-order quirk on
-  `IP_HDRINCL` — verify at impl time.)*
+- **Send:** raw `socket(AF_INET, SOCK_RAW, 112)`, `IP_TTL=255` + `bind()` src (kernel
+  builds the IP header); `sendto` peer_ip (unicast). *(Chose NOT to use `IP_HDRINCL` —
+  sidesteps the FreeBSD `ip_len`/`ip_off` byte-order hazard entirely; see Phase 2.)*
 - **Recv:** raw proto-112 socket delivers the IPv4 header inline for IPv4; read `ip_ttl`
   directly, **drop if != 255**. Demux by VRID → matching `vrrp_rt_t`. Unicast peer
   operation: no multicast join strictly required; join `224.0.0.18` only if a peer
@@ -301,13 +301,15 @@ secrets { ike-vrrp { secret = "<PASSCODE / PSK>" } }
   (kernel builds the IP header via `IP_TTL` + `bind`). Residual on-box checks: `bind`
   actually forces the source address on a raw socket, and raw IPv4 input includes the IP
   header on FreeBSD (both assumed in `net.c`).
-- **Kernel CARP**: FreeBSD has native CARP (different protocol); confirm no conflict on
-  proto 112 raw socket. No `use_vmac` needed (peer uses real MAC).
+- **Kernel CARP**: RESOLVED — FreeBSD's native `carp.ko` hijacks IP proto 112, so the
+  daemon received nothing (RX=0, `probes_received` stuck) until unloaded. Fix:
+  `kldunload carp`; permanent collision, so the rc.d script must unload it (commit
+  `c0e91db`). No `use_vmac` needed (peer uses real MAC).
 - **Gratuitous ARP** via BPF: needs `/dev/bpf` access + correct Ethernet ARP frame;
   without it, LAN takeover is slow (stale ARP caches).
 - **Multi-instance timing**: N instances × per-instance timers in one poll loop; keep the
   loop cheap, compute deadlines not per-tick scans.
-- **IPsec × raw socket**: confirm the kernel applies IPsec SPD to raw `IP_HDRINCL` sends
+- **IPsec × raw socket**: confirm the kernel applies IPsec SPD to raw proto-112 sends
   on FreeBSD (output policy lookup in `ip_output`) — else outbound VRRP would bypass
   IPsec. Use policy `require` so inbound unprotected VRRP is dropped (no auth bypass).
 - **IPsec SA down = no adverts**: dropped adverts → failover/split-brain per policy;
@@ -402,7 +404,7 @@ Each phase independently buildable + testable. One task at a time; each file wri
       Execution boxes stay open — they need the FreeBSD box + live peer.
 - [ ] Bring up strongSwan transport SA `192.168.1.1↔192.168.1.3`, proto 112, PSK (§6)
 - [ ] Set IPsec policy to `require`; confirm unprotected VRRP is dropped
-- [ ] Verify outbound raw `IP_HDRINCL` VRRP is IPsec-protected on the wire (tcpdump: ESP)
+- [ ] Verify outbound raw VRRP is IPsec-protected on the wire (tcpdump: ESP)
 - [ ] Confirm daemon still sees plaintext VRRP (kernel decrypts before raw socket) + TTL=255
 - [ ] Full failover test: our priority 110 vs peer 100 → we win MASTER, peer BACKUP
 - [ ] Kill our daemon → peer takes over (we sent resign) within Master_Down
@@ -457,13 +459,10 @@ Each phase independently buildable + testable. One task at a time; each file wri
 
 ## Open items to verify during build (not from memory)
 - [ ] VRRPv3 checksum exact algorithm — confirm vs RFC 5798 §5.1.1.4 + real capture
-- [ ] FreeBSD `IP_HDRINCL` `ip_len`/`ip_off` byte order on OPNsense 26.1
+- [x] FreeBSD `IP_HDRINCL` byte order — N/A: `net.c` uses `IP_TTL`+`bind`, never `IP_HDRINCL`
 - [ ] Raw proto-112 recv: header-inclusion + TTL read path on FreeBSD
 - [ ] Gratuitous ARP frame format via `/dev/bpf`
-- [ ] Native CARP non-conflict on proto 112
-- [ ] IPsec SPD applies to raw `IP_HDRINCL` output on FreeBSD/OPNsense 26.1
+- [x] Native CARP non-conflict on proto 112 — FAILED: `carp.ko` owns proto 112 (daemon
+      RX=0); fixed by `kldunload carp` (commit `c0e91db`)
+- [ ] IPsec SPD applies to raw proto-112 output on FreeBSD/OPNsense 26.1
 - [ ] strongSwan transport-mode single-protocol (proto 112) SA config on OPNsense
-
-
-
-
