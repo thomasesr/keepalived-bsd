@@ -15,6 +15,7 @@ SRCS    = src/main.c \
           src/config.c \
           src/heartbeat.c \
           src/vrrp.c \
+          src/net.c \
           src/state.c \
           src/iface.c \
           src/dhcp.c \

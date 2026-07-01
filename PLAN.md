@@ -297,8 +297,10 @@ secrets { ike-vrrp { secret = "<PASSCODE / PSK>" } }
 - **Checksum**: VRRPv3 pseudo-header inclusion is the #1 interop risk. Validate against
   a captured real-peer advert (tcpdump) before trusting the FSM.
 - **TTL=255**: enforce on send AND drop-on-recv; keepalived rejects non-255.
-- **FreeBSD `IP_HDRINCL` byte order**: `ip_len`/`ip_off` historically host-order on BSD
-  raw sends — verify on the target OPNsense 26.1.
+- **FreeBSD `IP_HDRINCL` byte order**: AVOIDED — `net.c` does not use `IP_HDRINCL`
+  (kernel builds the IP header via `IP_TTL` + `bind`). Residual on-box checks: `bind`
+  actually forces the source address on a raw socket, and raw IPv4 input includes the IP
+  header on FreeBSD (both assumed in `net.c`).
 - **Kernel CARP**: FreeBSD has native CARP (different protocol); confirm no conflict on
   proto 112 raw socket. No `use_vmac` needed (peer uses real MAC).
 - **Gratuitous ARP** via BPF: needs `/dev/bpf` access + correct Ethernet ARP frame;
@@ -340,10 +342,15 @@ Each phase independently buildable + testable. One task at a time; each file wri
       RFC 5798 §5.1.1.4 still to be confirmed on the wire)
 
 ### Phase 2 — Raw socket transport (`net.c`) [FreeBSD]
-- [ ] `net_open()` — `SOCK_RAW` proto 112, `IP_HDRINCL`, bind src, TTL=255
-- [ ] `net_send()` — unicast `sendto` peer, verify TTL/hdr byte order on OPNsense box
-- [ ] `net_recv()` — read incl. IP header, extract src + `ip_ttl`, **drop if != 255**
-- [ ] Test: send adverts for one VRID; confirm the **peer logs seeing us** (send-only)
+- [x] `net_vrrp_open()` — `SOCK_RAW` proto 112, `IP_TTL=255`, `bind()` src, non-blocking.
+      **Chose NOT to use `IP_HDRINCL`** — kernel builds the IP header, which removes the
+      BSD `ip_len`/`ip_off` byte-order hazard entirely.
+- [x] `net_vrrp_send()` — unicast `sendto` peer (source = bound addr)
+- [x] `net_vrrp_recv()` — parse kernel-included IP header, extract src + `ip_ttl`,
+      **drop if TTL != 255**; return code lets the caller drain-and-skip rejects
+- [x] `net.c` wired into Makefile + syntax-checked on Linux
+- [ ] **On-box:** send adverts for one VRID; confirm the peer logs seeing us (send-only)
+      — deferred to the box build/test pass (per chosen workflow)
 
 ### Phase 3 — Config parser (`config.c` rewrite)
 - [ ] Parse `[vrrp_instance NAME]` sections + all keys; repeatable `vip … dev …`
