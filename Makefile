@@ -35,7 +35,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -Iinclude -c -o $@ $<
 
 clean:
-	rm -f $(OBJS) $(TARGET) tests/run_vrrp tests/run_config
+	rm -f $(OBJS) $(TARGET) tests/run_vrrp tests/run_config tests/run_state
 
 # ── unit tests (portable; no FreeBSD-specific code) ─────────────────────────────
 
@@ -44,6 +44,8 @@ check:
 	./tests/run_vrrp
 	$(CC) $(CFLAGS) -D_DEFAULT_SOURCE -Iinclude -o tests/run_config tests/test_config.c src/config.c src/logger.c
 	./tests/run_config
+	$(CC) $(CFLAGS) -D_DEFAULT_SOURCE -Iinclude -o tests/run_state tests/test_state.c src/state.c src/net.c src/vrrp.c src/logger.c
+	./tests/run_state
 
 # ── daemon + config ───────────────────────────────────────────────────────────
 

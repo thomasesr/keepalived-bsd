@@ -367,11 +367,15 @@ Each phase independently buildable + testable. One task at a time; each file wri
       vip dev/label, legacy-reject, missing-vrid-reject). All pass.
 
 ### Phase 4 — Per-VRID FSM (`state.c` rewrite)
-- [ ] Per-instance timers: `Skew_Time`, `Master_Down_Interval` (centiseconds)
-- [ ] Init → Backup/Master; Backup Master_Down → Master; Master recv-higher → Backup
-- [ ] priority-0 (resign) handling on recv; equal-priority src-IP tiebreak
-- [ ] Poll loop drives all instances off deadlines (no per-tick scan)
-- [ ] Test: one instance, no peer → goes Master after Master_Down_Interval
+- [x] Per-instance timers `vrrp_skew_cs` / `vrrp_master_down_cs` (centiseconds, RFC 5798 s6.1)
+- [x] Init → Backup/Master (owner=255→Master); Backup Master_Down → Master;
+      Master recv-higher → Backup. Monotonic-ms deadlines, 50 ms poll (no per-tick scan)
+- [x] priority-0 resign handling (Backup→arm skew, Master→re-assert); equal-priority
+      higher-src-IP tiebreak; preempt honored (`vrrp_recv_action`)
+- [x] One shared raw socket, adverts demuxed by VRID; shutdown sends priority-0 resign
+- [x] Side-effects (VIP/DHCP/gARP) are log-only stubs with a clean seam for Phase 5
+- [x] Unit test `tests/test_state.c` (14 checks: timers + all transitions). All pass.
+- [ ] **On-box:** one instance, no peer → promotes after Master_Down_Interval — deferred
 
 ### Phase 5 — Transition side-effects
 - [ ] Hook `iface.c` VIP add/del per instance (VIP on its own `dev`)

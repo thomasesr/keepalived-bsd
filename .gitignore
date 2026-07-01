@@ -11,6 +11,7 @@ Dockerfile
 keepalived-bsd
 tests/run_vrrp
 tests/run_config
+tests/run_state
 
 # Build directories
 build/

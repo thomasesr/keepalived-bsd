@@ -1,199 +1,259 @@
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
+/*
+ * Per-VRID VRRPv3 finite state machine (RFC 5798 s6). One shared raw socket
+ * carries all instances; received adverts are demultiplexed by VRID.
+ *
+ * The pure decision helpers (skew/master-down timers and the receive action)
+ * carry no I/O and are unit-tested. Transition side-effects (VIP add/del, DHCP
+ * toggle, gratuitous ARP) are log-only stubs here and are implemented in
+ * Phase 5.
+ */
+
 #include <string.h>
-#include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+
 #include "state.h"
-#include "heartbeat.h"
-#include "iface.h"
-#include "dhcp.h"
-#include "alias.h"
+#include "net.h"
+#include "vrrp.h"
 #include "logger.h"
 
-static time_t now(void)
+/* ── pure FSM helpers (RFC 5798 s6.1, s6.4) ─────────────────────────────── */
+
+uint32_t vrrp_skew_cs(uint8_t priority, uint16_t adver_cs)
+{
+    /* Skew_Time = ((256 - priority) * Master_Adver_Interval) / 256 */
+    return (uint32_t)(256u - priority) * (uint32_t)adver_cs / 256u;
+}
+
+uint32_t vrrp_master_down_cs(uint8_t priority, uint16_t adver_cs)
+{
+    /* Master_Down_Interval = 3 * Master_Adver_Interval + Skew_Time */
+    return 3u * (uint32_t)adver_cs + vrrp_skew_cs(priority, adver_cs);
+}
+
+vrrp_action_t vrrp_recv_action(vrrp_state_t state, uint8_t my_prio,
+                               struct in_addr my_ip, int preempt,
+                               const vrrp_advert_t *adv)
+{
+    if (state == VRRP_STATE_BACKUP) {
+        if (adv->priority == 0)
+            return VRRP_ACT_RESET_TIMER_SKEW;            /* peer resigning */
+        if (!preempt || adv->priority >= my_prio)
+            return VRRP_ACT_RESET_TIMER;                 /* valid master */
+        return VRRP_ACT_NONE;                            /* lower: we take over */
+    }
+    if (state == VRRP_STATE_MASTER) {
+        if (adv->priority == 0)
+            return VRRP_ACT_SEND_NOW;                    /* peer resigned */
+        if (adv->priority > my_prio ||
+            (adv->priority == my_prio &&
+             ntohl(adv->src.s_addr) > ntohl(my_ip.s_addr)))
+            return VRRP_ACT_BECOME_BACKUP;               /* higher wins */
+        return VRRP_ACT_NONE;                            /* we stay master */
+    }
+    return VRRP_ACT_NONE;
+}
+
+/* ── side-effect stubs (Phase 5 fills these) ────────────────────────────── */
+
+static void sidefx_enter_master(const vrrp_instance_t *in)
+{
+    log_info("vrrp: [%s] vrid %u -> MASTER", in->name, in->vrid);
+    /* Phase 5: add VIPs (iface.c), enable DHCP (dhcp.c), gratuitous ARP (arp.c) */
+}
+
+static void sidefx_enter_backup(const vrrp_instance_t *in)
+{
+    log_info("vrrp: [%s] vrid %u -> BACKUP", in->name, in->vrid);
+    /* Phase 5: remove VIPs (iface.c), disable DHCP (dhcp.c) */
+}
+
+/* ── internals ──────────────────────────────────────────────────────────── */
+
+static uint64_t now_ms(void)
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec;
+    return (uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u;
 }
 
-int state_init(state_ctx_t *ctx, config_t *cfg)
+static int send_advert(state_ctx_t *ctx, vrrp_rt_t *rt, uint8_t priority)
 {
-    memset(ctx, 0, sizeof(*ctx));
-    ctx->cfg     = cfg;
-    ctx->current = STATE_BACKUP;
+    uint8_t buf[VRRP_HDR_LEN + VRRP_MAX_VIPS * 4];
+    vrrp_advert_t a;
+    int i, n;
 
-    ctx->sock = hb_socket_open(cfg->port);
-    if (ctx->sock < 0) {
-        log_err("state_init: failed to open heartbeat socket on port %u", cfg->port);
+    memset(&a, 0, sizeof(a));
+    a.vrid      = rt->cfg->vrid;
+    a.priority  = priority;
+    a.adver_cs  = rt->cfg->adver_cs;
+    a.vip_count = rt->cfg->vip_count;
+    for (i = 0; i < rt->cfg->vip_count; i++)
+        a.vips[i] = rt->cfg->vips[i].addr;
+
+    n = vrrp_advert_encode(buf, sizeof(buf), &a, ctx->src_ip, rt->cfg->peer_ip);
+    if (n < 0)
         return -1;
-    }
-
-    /* non-blocking so recv loop doesn't stall the send timer */
-    int flags = fcntl(ctx->sock, F_GETFL, 0);
-    fcntl(ctx->sock, F_SETFL, flags | O_NONBLOCK);
-
-    /* Discover the local source address used to reach the peer. A connected
-     * UDP socket lets getsockname() report the kernel's chosen source IP,
-     * which is a stable identity for the equal-priority split-brain tiebreak. */
-    ctx->local_addr.s_addr = INADDR_ANY;
-    {
-        int tmp = socket(AF_INET, SOCK_DGRAM, 0);
-        if (tmp >= 0) {
-            struct sockaddr_in pa;
-            socklen_t ln = sizeof(pa);
-            memset(&pa, 0, sizeof(pa));
-            pa.sin_family = AF_INET;
-            pa.sin_addr   = cfg->peer_addr;
-            pa.sin_port   = htons(cfg->port);
-            if (connect(tmp, (struct sockaddr *)&pa, sizeof(pa)) == 0 &&
-                getsockname(tmp, (struct sockaddr *)&pa, &ln) == 0)
-                ctx->local_addr = pa.sin_addr;
-            close(tmp);
-        }
-    }
-
-    ctx->last_hb_recv = now(); /* avoid immediate failover on startup */
+    if (net_vrrp_send(ctx->sock, rt->cfg->peer_ip, buf, (size_t)n) != 0)
+        return -1;
+    rt->probes_sent++;
     return 0;
 }
 
-void state_enter_master(state_ctx_t *ctx)
+static void enter_master(state_ctx_t *ctx, vrrp_rt_t *rt)
 {
+    rt->state = VRRP_STATE_MASTER;
+    rt->last_transition = time(NULL);
+    send_advert(ctx, rt, rt->cfg->priority);
+    rt->next_adv_ms = now_ms() + (uint64_t)rt->cfg->adver_cs * 10u;
+    sidefx_enter_master(rt->cfg);
+}
+
+static void enter_backup(state_ctx_t *ctx, vrrp_rt_t *rt)
+{
+    (void)ctx;
+    rt->state = VRRP_STATE_BACKUP;
+    rt->last_transition = time(NULL);
+    rt->master_down_ms = now_ms() +
+        (uint64_t)vrrp_master_down_cs(rt->cfg->priority, rt->cfg->adver_cs) * 10u;
+    sidefx_enter_backup(rt->cfg);
+}
+
+static void dispatch(state_ctx_t *ctx, const vrrp_advert_t *adv)
+{
+    uint64_t now;
     int i;
-    log_info("state: transitioning to MASTER");
-    ctx->current = STATE_MASTER;
-    for (i = 0; i < ctx->cfg->iface_count; i++) {
-        iface_vip_add(&ctx->cfg->ifaces[i]);
-        alias_add_vip(&ctx->cfg->ifaces[i]);
-        dhcp_enable_iface(&ctx->cfg->ifaces[i], ctx->cfg->ifaces[i].dhcp_backend);
+
+    for (i = 0; i < ctx->count; i++) {
+        vrrp_rt_t *rt = &ctx->rt[i];
+        if (rt->cfg->vrid != adv->vrid)
+            continue;
+        if (adv->src.s_addr != rt->cfg->peer_ip.s_addr)
+            continue;                        /* only adverts from our peer */
+        rt->probes_received++;
+        now = now_ms();
+        switch (vrrp_recv_action(rt->state, rt->cfg->priority,
+                                 ctx->src_ip, rt->cfg->preempt, adv)) {
+        case VRRP_ACT_RESET_TIMER:
+            rt->master_down_ms = now +
+                (uint64_t)vrrp_master_down_cs(rt->cfg->priority,
+                                              rt->cfg->adver_cs) * 10u;
+            break;
+        case VRRP_ACT_RESET_TIMER_SKEW:
+            rt->master_down_ms = now +
+                (uint64_t)vrrp_skew_cs(rt->cfg->priority, rt->cfg->adver_cs) * 10u;
+            break;
+        case VRRP_ACT_BECOME_BACKUP:
+            enter_backup(ctx, rt);
+            break;
+        case VRRP_ACT_SEND_NOW:
+            send_advert(ctx, rt, rt->cfg->priority);
+            rt->next_adv_ms = now + (uint64_t)rt->cfg->adver_cs * 10u;
+            break;
+        default:
+            break;
+        }
+        return;
     }
 }
 
-void state_enter_backup(state_ctx_t *ctx)
+/* ── public API ─────────────────────────────────────────────────────────── */
+
+int state_init(state_ctx_t *ctx, config_t *cfg)
 {
     int i;
-    log_info("state: transitioning to BACKUP");
-    ctx->current = STATE_BACKUP;
-    for (i = 0; i < ctx->cfg->iface_count; i++) {
-        dhcp_disable_iface(&ctx->cfg->ifaces[i], ctx->cfg->ifaces[i].dhcp_backend);
-        alias_del_vip(&ctx->cfg->ifaces[i]);
-        iface_vip_del(&ctx->cfg->ifaces[i]);
+
+    memset(ctx, 0, sizeof(*ctx));
+    ctx->cfg    = cfg;
+    ctx->count  = cfg->inst_count;
+    ctx->src_ip = cfg->inst[0].src_ip;
+
+    for (i = 1; i < cfg->inst_count; i++)
+        if (cfg->inst[i].src_ip.s_addr != ctx->src_ip.s_addr)
+            log_warn("state: [%s] unicast_src_ip differs; all instances share "
+                     "one socket source for now", cfg->inst[i].name);
+
+    ctx->sock = net_vrrp_open(ctx->src_ip);
+    if (ctx->sock < 0) {
+        log_err("state_init: cannot open VRRP socket");
+        return -1;
     }
+
+    for (i = 0; i < cfg->inst_count; i++) {
+        vrrp_rt_t *rt = &ctx->rt[i];
+        rt->cfg   = &cfg->inst[i];
+        rt->state = VRRP_STATE_INIT;
+        rt->last_transition = time(NULL);
+    }
+
+    /* Startup election (RFC 5798 s6.4.1): the address owner (priority 255) goes
+     * MASTER at once; everyone else starts BACKUP and waits Master_Down. */
+    for (i = 0; i < cfg->inst_count; i++) {
+        vrrp_rt_t *rt = &ctx->rt[i];
+        if (rt->cfg->priority == VRRP_PRIO_OWNER)
+            enter_master(ctx, rt);
+        else
+            enter_backup(ctx, rt);
+    }
+    return 0;
 }
 
 void state_run(state_ctx_t *ctx)
 {
-    config_t         *cfg  = ctx->cfg;
-    struct sockaddr_in peer;
-    hb_packet_t       pkt;
-    time_t            last_send = 0;
+    uint8_t buf[256];
+    struct in_addr src;
+    uint64_t now;
+    int ttl, r, i;
 
-    memset(&peer, 0, sizeof(peer));
-    peer.sin_family = AF_INET;
-    peer.sin_addr   = cfg->peer_addr;
-    peer.sin_port   = htons(cfg->port);
-
-    log_info("state: starting event loop (initial state: BACKUP)");
+    log_info("state: event loop start, %d instance(s)", ctx->count);
 
     while (g_running) {
-        time_t t = now();
-
-        /* send heartbeat if MASTER */
-        if (ctx->current == STATE_MASTER && t - last_send >= cfg->heartbeat_sec) {
-            hb_fill(&pkt, cfg->priority, 1, ++ctx->send_seq, 0);
-            hb_send(ctx->sock, &peer, &pkt);
-            last_send = t;
+        /* drain the shared socket; dispatch each advert to its VRID */
+        while ((r = net_vrrp_recv(ctx->sock, buf, sizeof(buf), &src, &ttl)) != -1) {
+            vrrp_advert_t adv;
+            if (r > 0 &&
+                vrrp_advert_decode(buf, (size_t)r, src, ctx->src_ip, &adv) == 0)
+                dispatch(ctx, &adv);
         }
 
-        /* receive any incoming heartbeats */
-        struct sockaddr_in from;
-        while (hb_recv(ctx->sock, &pkt, &from) == 0) {
-            /* ignore our own packets (shouldn't arrive but guard anyway) */
-            if (from.sin_addr.s_addr == cfg->peer_addr.s_addr) {
-                ctx->last_hb_recv = t;
-
-                if (pkt.flags & HB_FLAG_GOODBYE) {
-                    if (ctx->current == STATE_BACKUP) {
-                        log_info("state: peer sent goodbye — taking MASTER");
-                        state_enter_master(ctx);
-                    }
-                    continue;
+        now = now_ms();
+        for (i = 0; i < ctx->count; i++) {
+            vrrp_rt_t *rt = &ctx->rt[i];
+            if (rt->state == VRRP_STATE_MASTER) {
+                if (now >= rt->next_adv_ms) {
+                    send_advert(ctx, rt, rt->cfg->priority);
+                    rt->next_adv_ms = now + (uint64_t)rt->cfg->adver_cs * 10u;
                 }
-
-                /* Only MASTERs transmit heartbeats, so a packet arriving while
-                 * we are MASTER means the peer is ALSO MASTER — a split brain
-                 * that must be resolved deterministically. Highest priority
-                 * wins, regardless of the preempt flag (preempt cannot prevent
-                 * split-brain resolution because BACKUP nodes are silent). */
-                if (ctx->current == STATE_MASTER) {
-                    if (pkt.priority > cfg->priority) {
-                        log_info("state: peer priority %u > ours %u, yielding MASTER",
-                                 pkt.priority, cfg->priority);
-                        state_enter_backup(ctx);
-                    } else if (pkt.priority == cfg->priority) {
-                        /* Equal priority: break the tie deterministically so
-                         * exactly one node yields. The node with the lower
-                         * source IP yields; both sides apply the same rule with
-                         * addresses swapped, so the result is consistent. */
-                        if (ntohl(ctx->local_addr.s_addr) <
-                            ntohl(from.sin_addr.s_addr)) {
-                            log_warn("state: EQUAL priority %u split brain — "
-                                     "yielding (lower IP); set distinct priorities",
-                                     pkt.priority);
-                            state_enter_backup(ctx);
-                        } else {
-                            log_warn("state: EQUAL priority %u split brain — "
-                                     "holding MASTER (higher IP); set distinct "
-                                     "priorities", pkt.priority);
-                        }
-                    }
-                }
+            } else if (rt->state == VRRP_STATE_BACKUP) {
+                if (now >= rt->master_down_ms)
+                    enter_master(ctx, rt);
             }
         }
-
-        /* failover: promote if peer silent too long */
-        if (ctx->current == STATE_BACKUP &&
-            t - ctx->last_hb_recv >= cfg->timeout_sec) {
-            state_enter_master(ctx);
-        }
-
-        usleep(100000); /* 100 ms poll interval */
+        usleep(50000); /* 50 ms poll */
     }
 
-    /* Loop exited via g_running == 0 (SIGTERM/SIGINT). */
     log_info("state: shutdown requested");
     state_shutdown(ctx);
 }
 
-/* Graceful teardown: if MASTER, tell the peer to take over immediately
- * (GOODBYE), then release VIPs / aliases and disable DHCP. Idempotent. */
 void state_shutdown(state_ctx_t *ctx)
 {
-    config_t          *cfg = ctx->cfg;
-    struct sockaddr_in peer;
-    hb_packet_t        pkt;
+    int i;
 
-    if (ctx->current == STATE_MASTER && ctx->sock >= 0) {
-        memset(&peer, 0, sizeof(peer));
-        peer.sin_family = AF_INET;
-        peer.sin_addr   = cfg->peer_addr;
-        peer.sin_port   = htons(cfg->port);
-
-        /* Send twice — UDP is unreliable and a lost GOODBYE forces the peer
-         * to wait the full failover timeout before promoting. */
-        hb_fill(&pkt, cfg->priority, 1, ++ctx->send_seq, 1);
-        hb_send(ctx->sock, &peer, &pkt);
-        hb_fill(&pkt, cfg->priority, 1, ++ctx->send_seq, 1);
-        hb_send(ctx->sock, &peer, &pkt);
-        log_info("state: sent GOODBYE to peer");
-
-        state_enter_backup(ctx); /* remove VIPs, alias entries, disable DHCP */
+    for (i = 0; i < ctx->count; i++) {
+        vrrp_rt_t *rt = &ctx->rt[i];
+        if (rt->state == VRRP_STATE_MASTER) {
+            /* RFC 5798: a master shutting down sends a priority-0 advert so the
+             * backup takes over immediately rather than waiting Master_Down. */
+            send_advert(ctx, rt, VRRP_PRIO_STOP);
+            enter_backup(ctx, rt);   /* release VIPs / DHCP (Phase 5) */
+        }
     }
-
     if (ctx->sock >= 0) {
         close(ctx->sock);
         ctx->sock = -1;
     }
+    log_info("state: shutdown complete");
 }
+
